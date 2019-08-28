@@ -7,6 +7,17 @@ To install and use pybgs with pip -- we need full c++ library of opencv version 
 
 `brew install opencv@3`
 
+To install python3 wrapper for pybgs
+```
+git clone --recursive https://github.com/andrewssobral/bgslibrary.git
+
+cd bgslibrary
+cd build
+
+cmake -D BGS_PYTHON_SUPPORT=ON OpenCV_DIR="your installed OpenCV directory" ..
+make install
+```
+
 ### benchmark.py  ###
 
 This python script runs multiple algorithms and creates the calculated backgroundimages and the writes the time to finish in a text file.
