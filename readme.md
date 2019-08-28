@@ -3,11 +3,12 @@
 ### Libraries ###
 * python: glob; numby; openvc-python; pybgs
 
-To install and use pybgs with pip -- we need full c++ library of opencv version 3
+We need to use opencv version 3.x for best support with bgslibrary, see issue: https://github.com/andrewssobral/bgslibrary/issues/164
+
+To install and use pybgs manually:
 
 `brew install opencv@3`
 
-To install python3 wrapper for pybgs
 ```
 git clone --recursive https://github.com/andrewssobral/bgslibrary.git
 
