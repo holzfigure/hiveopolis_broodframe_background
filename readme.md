@@ -14,7 +14,7 @@ git clone --recursive https://github.com/andrewssobral/bgslibrary.git
 cd bgslibrary
 cd build
 
-cmake -D BGS_PYTHON_SUPPORT=ON OpenCV_DIR="your installed OpenCV directory" ..
+cmake -D BGS_PYTHON_SUPPORT=ON -D OpenCV_DIR="your installed OpenCV directory" ..
 make install
 ```
 
