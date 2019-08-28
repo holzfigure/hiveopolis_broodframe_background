@@ -3,7 +3,7 @@
 ### Libraries ###
 * python: glob; numby; openvc-python; pybgs
 
-To install pybgs with pip full library of opencv needs to be installed and to work with most algorithms we need to install opencv3!
+To install and use pybgs with pip -- we need full c++ library of opencv version 3
 
 `brew install opencv3`
 
