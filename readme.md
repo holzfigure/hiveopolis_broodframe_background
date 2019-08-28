@@ -5,7 +5,7 @@
 
 To install and use pybgs with pip -- we need full c++ library of opencv version 3
 
-`brew install opencv3`
+`brew install opencv@3`
 
 ### benchmark.py  ###
 
