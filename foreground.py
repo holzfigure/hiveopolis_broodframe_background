@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 plt.style.use('fast')
 
 # https://makersportal.com/blog/2018/8/14/real-time-graphing-in-python
-def live_plotter(x_vec, y1_data, line1, ax, pause_time = 0.04):
+def live_plotter(x_vec, y1_data, line1, ax, frame, pause_time = 0.04):
 
     if line1 == []:
         # this is the call to matplotlib that allows dynamic plotting
@@ -70,7 +70,11 @@ def live_plotter(x_vec, y1_data, line1, ax, pause_time = 0.04):
     # this pauses the data so the figure/axis can catch up - the amount of pause can be altered above
     plt.pause(pause_time)
 
-    # return line so we can update it again in the next iteration
+    fname = 'plot/'+str(frame)+'.png'
+    plt.savefig(fname, dpi=None, facecolor='w', edgecolor='w',
+        orientation='portrait', papertype=None, format=None,
+        transparent=False, bbox_inches=None, pad_inches=0.1,
+        frameon=None, metadata=None)    # return line so we can update it again in the next iteration
     return line1, ax
 
 # Our used algorithm
@@ -86,6 +90,23 @@ y_vec = []
 
 second_count = 0        # used to count frames
 n_white_pix_sum = 0     # helper variable to sum white pixel in n amount of frames
+
+# create folder for plots and empty it
+folder = "plot"
+try:
+    os.mkdir(folder)
+except:
+    print("Folder is already created")
+
+for the_file in os.listdir(folder):
+    file_path = os.path.join(folder, the_file)
+    try:
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+        #elif os.path.isdir(file_path): shutil.rmtree(file_path)
+    except Exception as e:
+        print(e)
+
 
 # load video
 capture = cv.VideoCapture(video_file)
@@ -143,7 +164,7 @@ while True:
             x_vec.append(pos_frame)
 
             # create our live plot
-            w_pixel_array, ax = live_plotter(x_vec, y_vec, w_pixel_array, ax)
+            w_pixel_array, ax = live_plotter(x_vec, y_vec, w_pixel_array, ax, pos_frame)
 
             # move our vector forward
             if (pos_frame > 500):
