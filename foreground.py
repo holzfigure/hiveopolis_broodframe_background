@@ -1,28 +1,13 @@
 ########################################
 ########################################
-# Python script to test various algorithms
-# as benchmark for quality and speed
-# to remove moving bees from broodframe
+# This sript will take video.MP4 exract
+# a given area and calculate the pixel difference
+# between each frame after n frames it
+# takes the mean and plot it
+# settings for pixel difference in
+# /config/FrameDifference.xml
 ########################################
 ########################################
-
-# Use open cv version 3 for best support
-# if you other version installed and no enviroments set up you must first uninstall
-# the other open cv versions
-
-# best way is virtual enviroments
-# go into project folder and then following commands:
-# python3 -m venv env
-# source env/bin/activate (mac)
-# .\env\Scripts\activate (windows)
-# (you can leave the enviroment with deactivate)
-
-# check if activation did work:
-# which python
-
-# install python libraries needed:
-# pip install opencv-python==3.4.5.20
-# pip install pybgs
 
 # Basic libraries
 import numpy as np
