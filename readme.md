@@ -24,6 +24,11 @@ make install
 This python script runs multiple algorithms and creates the calculated backgroundimages and the writes the time to finish in a text file.
 `python benchmark.py`
 
+### foreground.py  ###
+
+Foreground mask and pixeldifference as plot
+`python foreground.py`
+
 ### video.py ###
 
 Creates a video file from images in given folder
@@ -58,5 +63,3 @@ month     = {Jun},
 url       = {https://github.com/andrewssobral/bgslibrary}
 }
 ```
-
-
