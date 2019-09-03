@@ -26,7 +26,7 @@ This python script runs multiple algorithms and creates the calculated backgroun
 
 ### foreground.py  ###
 
-Foreground mask and pixeldifference as plot
+Foreground mask and pixeldifference as plot from 'video.MP4' in main folder. It will save the plot as png into the plot folder. Each 5 frames are one generated plot images, this means for a 25fps Videos it will create 5 plot images.
 `python foreground.py`
 
 ### video.py ###
