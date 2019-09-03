@@ -126,7 +126,7 @@ while True:
         cv.namedWindow('original',cv.WINDOW_NORMAL)
         cv.resizeWindow('original', 600, 600)
         # draws a rectangle on frame
-        #cv.rectangle(frame, (700, 200), (1730, 750), (255,0,0), 2)
+        cv.rectangle(frame, (700, 200), (1730, 750), (255,0,0), 2)
         cv.imshow('original', frame)
 
         # crop only the area of interest for us
