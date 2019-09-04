@@ -85,7 +85,7 @@ jump_frames = 0
 # save plot
 save_plot = False
 # threshold
-treshold = 50
+treshold = 25
 
 # helper arrays
 w_pixel_array = []
@@ -150,19 +150,20 @@ while True:
 
         pos_frame = capture.get(1)
 
+        # change image to grayscale
+        roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY);
+        # maybe add Gaussian?
+        roi = cv.GaussianBlur(roi, (5, 5), 0)
+
         # check if it was the first run then we use same picture for history as input
         if (len(img_history) == 0):
             img_history = roi
 
         # calculate absdiff
         img_output = cv.absdiff(roi, img_history)
-        # change image to grayscale
-        img_output = cv.cvtColor(img_output, cv.COLOR_BGR2GRAY);
-        # maybe add Gaussian?
-        img_output = cv.GaussianBlur(img_output, (3, 3), 0)
 
         # exports a black and white image
-        (thresh, img_output) = cv.threshold(img_output, treshold, 255, cv.THRESH_BINARY)
+        _, img_output = cv.threshold(img_output, treshold, 255, cv.THRESH_BINARY)
 
         # show foreground mask in window
         cv.namedWindow('foreground', cv.WINDOW_NORMAL)
