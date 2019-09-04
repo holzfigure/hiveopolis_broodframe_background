@@ -6,6 +6,9 @@
 # takes the mean and plot it
 # settings for pixel difference in
 # /config/FrameDifference.xml
+# SETTINGS:
+# you can jump frames forward to see variable jump_frames
+# if you set save_plot the plots will get saved into plot folder
 ########################################
 ########################################
 
@@ -29,12 +32,12 @@ import matplotlib.pyplot as plt
 plt.style.use('fast')
 
 # https://makersportal.com/blog/2018/8/14/real-time-graphing-in-python
-def live_plotter(x_vec, y1_data, line1, ax, frame, pause_time = 0.04):
+def live_plotter(x_vec, y1_data, line1, ax, frame, save, pause_time = 0.04):
 
     if line1 == []:
         # this is the call to matplotlib that allows dynamic plotting
         plt.ion()
-        fig = plt.figure(figsize = (6 , 6))
+        fig = plt.figure(figsize = (8 , 4))
         ax = fig.add_subplot(1,1,1)
         # create a variable for the line so we can later update it
         line1, = ax.plot(x_vec, y1_data, '-o', alpha = 0.8)
@@ -70,17 +73,20 @@ def live_plotter(x_vec, y1_data, line1, ax, frame, pause_time = 0.04):
     # this pauses the data so the figure/axis can catch up - the amount of pause can be altered above
     plt.pause(pause_time)
 
-    fname = 'plot/'+str(frame)+'.png'
-    plt.savefig(fname, dpi=None, facecolor='w', edgecolor='w',
-        orientation='portrait', papertype=None, format=None,
-        transparent=False, bbox_inches=None, pad_inches=0.1,
-        frameon=None, metadata=None)    # return line so we can update it again in the next iteration
+    # if we want to save the plots
+    if save:
+        fname = 'plot/'+str(frame)+'.png'
+        plt.savefig(fname, dpi=None, facecolor='w', edgecolor='w', orientation='portrait', papertype=None, format=None, transparent=False, bbox_inches=None, pad_inches=0.1, frameon=None, metadata=None)    # return line so we can update it again in the next iteration
     return line1, ax
 
 # Our used algorithm
 algorithm = bgs.FrameDifference()
 # our Video file
 video_file = "video.MP4"
+# jump frames forward
+jump_frames = 0
+# save plot
+save_plot = False
 
 # helper arrays
 w_pixel_array = []
@@ -116,6 +122,9 @@ while not capture.isOpened():
     cv.waitKey(1000)
     print("Wait for the header")
 
+# jump forward in frames
+capture.set(cv.CAP_PROP_POS_FRAMES, jump_frames)
+
 while True:
     # read video
     flag, frame = capture.read()
@@ -124,7 +133,7 @@ while True:
     if flag:
         # show video in ouput
         cv.namedWindow('original',cv.WINDOW_NORMAL)
-        cv.resizeWindow('original', 600, 600)
+        cv.resizeWindow('original', 600, 400)
         # draws a rectangle on frame
         cv.rectangle(frame, (700, 200), (1730, 750), (255,0,0), 2)
         cv.imshow('original', frame)
@@ -132,7 +141,7 @@ while True:
         # crop only the area of interest for us
         roi = frame[200:750+1, 700:1730+1]
         cv.namedWindow('cropped',cv.WINDOW_NORMAL)
-        cv.resizeWindow('cropped', 600, 600)
+        cv.resizeWindow('cropped', 600, 400)
         cv.imshow('cropped', roi)
 
 
@@ -142,7 +151,7 @@ while True:
         img_output = algorithm.apply(roi)
         # show foreground mask in window
         cv.namedWindow('foreground',cv.WINDOW_NORMAL)
-        cv.resizeWindow('foreground', 600, 600)
+        cv.resizeWindow('foreground', 600, 400)
         cv.imshow('foreground', img_output)
 
         # all pixels of image
@@ -160,14 +169,14 @@ while True:
             # mean and relative value to all pixels of the cropped frame
             relative_white = (n_white_pix_sum / second_count) /  n_all_px * 100
             # add value our vector
-            y_vec.append(relative_white)
-            x_vec.append(pos_frame)
+            y_vec.extend([relative_white])
+            x_vec.extend([pos_frame])
 
             # create our live plot
-            w_pixel_array, ax = live_plotter(x_vec, y_vec, w_pixel_array, ax, pos_frame)
+            w_pixel_array, ax = live_plotter(x_vec, y_vec, w_pixel_array, ax, pos_frame, save_plot)
 
             # move our vector forward
-            if (pos_frame > 500):
+            if (len(x_vec) > 500):
                 y_vec.pop(0)
                 x_vec.pop(0)
 
