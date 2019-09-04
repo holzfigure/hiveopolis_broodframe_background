@@ -58,52 +58,52 @@ def check_opencv_version(major):
 algorithms = []
 
 ## bgslibrary algorithms
-algorithms.append(bgs.FrameDifference())
-algorithms.append(bgs.StaticFrameDifference())
-algorithms.append(bgs.WeightedMovingMean())
-algorithms.append(bgs.WeightedMovingVariance())
-algorithms.append(bgs.AdaptiveBackgroundLearning())
-algorithms.append(bgs.AdaptiveSelectiveBackgroundLearning())
+#algorithms.append(bgs.FrameDifference())
+#algorithms.append(bgs.StaticFrameDifference())
+#algorithms.append(bgs.WeightedMovingMean())
+#algorithms.append(bgs.WeightedMovingVariance())
+#algorithms.append(bgs.AdaptiveBackgroundLearning())
+#algorithms.append(bgs.AdaptiveSelectiveBackgroundLearning())
 algorithms.append(bgs.MixtureOfGaussianV2())
-if is_cv2():
-  algorithms.append(bgs.MixtureOfGaussianV1()) # if opencv 2.x
-  algorithms.append(bgs.GMG()) # if opencv 2.x
-if is_cv3():
-  algorithms.append(bgs.KNN()) # if opencv 3.x
-if is_cv2() or is_cv3():
-  algorithms.append(bgs.DPAdaptiveMedian())
-  algorithms.append(bgs.DPGrimsonGMM())
-  algorithms.append(bgs.DPZivkovicAGMM())
-  algorithms.append(bgs.DPMean())
-  algorithms.append(bgs.DPWrenGA())
-  algorithms.append(bgs.DPPratiMediod())
-  algorithms.append(bgs.DPEigenbackground())
-  algorithms.append(bgs.DPTexture())
-  algorithms.append(bgs.T2FGMM_UM())
-  algorithms.append(bgs.T2FGMM_UV())
-  algorithms.append(bgs.T2FMRF_UM())
-  algorithms.append(bgs.T2FMRF_UV())
-  algorithms.append(bgs.FuzzySugenoIntegral())
-  algorithms.append(bgs.FuzzyChoquetIntegral())
-  algorithms.append(bgs.LBSimpleGaussian())
-  algorithms.append(bgs.LBFuzzyGaussian())
-  algorithms.append(bgs.LBMixtureOfGaussians())
-  algorithms.append(bgs.LBAdaptiveSOM())
-  algorithms.append(bgs.LBFuzzyAdaptiveSOM())
-  algorithms.append(bgs.LBP_MRF())
-  algorithms.append(bgs.MultiLayer())
-  algorithms.append(bgs.PixelBasedAdaptiveSegmenter())
-  algorithms.append(bgs.VuMeter())
-  algorithms.append(bgs.KDE())
-  algorithms.append(bgs.IndependentMultimodal())
-  algorithms.append(bgs.MultiCue())
-algorithms.append(bgs.SigmaDelta())
-algorithms.append(bgs.SuBSENSE())
-algorithms.append(bgs.LOBSTER())
-algorithms.append(bgs.PAWCS())
-algorithms.append(bgs.TwoPoints())
-algorithms.append(bgs.ViBe())
-algorithms.append(bgs.CodeBook())
+#if is_cv2():
+  #algorithms.append(bgs.MixtureOfGaussianV1()) # if opencv 2.x
+  #algorithms.append(bgs.GMG()) # if opencv 2.x
+#if is_cv3():
+  #algorithms.append(bgs.KNN()) # if opencv 3.x
+#if is_cv2() or is_cv3():
+  #algorithms.append(bgs.DPAdaptiveMedian())
+  #algorithms.append(bgs.DPGrimsonGMM())
+  #algorithms.append(bgs.DPZivkovicAGMM())
+  #algorithms.append(bgs.DPMean())
+  #algorithms.append(bgs.DPWrenGA())
+  #algorithms.append(bgs.DPPratiMediod())
+  #algorithms.append(bgs.DPEigenbackground())
+  #algorithms.append(bgs.DPTexture())
+  #algorithms.append(bgs.T2FGMM_UM())
+  #algorithms.append(bgs.T2FGMM_UV())
+  #algorithms.append(bgs.T2FMRF_UM())
+  #algorithms.append(bgs.T2FMRF_UV())
+  #algorithms.append(bgs.FuzzySugenoIntegral())
+  #algorithms.append(bgs.FuzzyChoquetIntegral())
+  #algorithms.append(bgs.LBSimpleGaussian())
+  #algorithms.append(bgs.LBFuzzyGaussian())
+  #algorithms.append(bgs.LBMixtureOfGaussians())
+  #algorithms.append(bgs.LBAdaptiveSOM())
+  #algorithms.append(bgs.LBFuzzyAdaptiveSOM())
+  #algorithms.append(bgs.LBP_MRF())
+  #algorithms.append(bgs.MultiLayer())
+  #algorithms.append(bgs.PixelBasedAdaptiveSegmenter())
+  #algorithms.append(bgs.VuMeter())
+  #algorithms.append(bgs.KDE())
+  #algorithms.append(bgs.IndependentMultimodal())
+  #algorithms.append(bgs.MultiCue())
+#algorithms.append(bgs.SigmaDelta())
+#algorithms.append(bgs.SuBSENSE())
+#algorithms.append(bgs.LOBSTER())
+#algorithms.append(bgs.PAWCS())
+#algorithms.append(bgs.TwoPoints())
+#algorithms.append(bgs.ViBe())
+#algorithms.append(bgs.CodeBook())
 
 # path to raw files
 path_raw = 'img'
@@ -111,6 +111,8 @@ path_raw = 'img'
 # define minimum of runs before creating the first background
 # if is atm not included if(x > min_runs):
 min_runs = 300
+
+max_runs = 100
 
 # load all img as array reverse sorted with oldest at beginning
 array = sorted(glob.iglob(path_raw + '/*.jpg'), key = os.path.getctime, reverse = True)
@@ -151,6 +153,9 @@ for algorithm in algorithms:
         # print(img_bg)
         cv.imwrite(img_bg, img_bgmodel)
         # if ends if TODO included
+
+        if (x == max_runs):
+            break
 
         print("Runs left: " + str(len(array)-x))
 
