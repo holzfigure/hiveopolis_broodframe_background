@@ -120,7 +120,7 @@ def live_plotter(x_vec, y1_data, line1, ax, frame, save, plot_breakpoint, mean_i
         line1, = ax.plot(x_vec, y1_data, '-o', alpha = 0.8)
         #update plot label/title
         plt.ylabel('Moved pixels [%]')
-        plt.xlabel('Frames [{}s Interval]'.format(mean_interval))
+        plt.xlabel('Frames [{} Frames Interval]'.format(mean_interval))
         plt.ylim(0,15,0.5)
         plt.show()
 
@@ -260,7 +260,7 @@ while True:
             w_pixel_array, ax = live_plotter(x_vec, y_vec, w_pixel_array, ax, pos_frame, save_plot, plot_breakpoint, mean_interval)
 
             # move our vector forward
-            if (len(x_vec) > 1500):
+            if (len(x_vec) > 250):
                 y_vec.pop(0)
                 x_vec.pop(0)
 
