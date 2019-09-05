@@ -1,6 +1,6 @@
 ## Algorithm testing to remove bees from timelapse of broodframe images ##
 
-### Libraries ###
+### Main Libraries ###
 `glob; numby; openvc-python; pybgs`
 
 We need to use opencv version 3.x for best support with bgslibrary, see issue: https://github.com/andrewssobral/bgslibrary/issues/164
