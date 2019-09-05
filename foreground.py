@@ -32,11 +32,13 @@ video_file = "video.MP4"
 # create folder for plots and empty it
 folder = "plot"
 # jump frames forward
-jump_frames = 6000
+jump_frames = 7000
 # save plot
 save_plot = False
 # threshold
 threshold = 7
+# mean interval for generating mean of pixel change and plotting steps, example 10 = each 10 frames make the mean and generate plot point
+mean_interval = 10
 # our rectangle area
 x1 = 1130
 x2 = 1800
@@ -44,6 +46,8 @@ y1 = 130
 y2 = 900
 # plot pixel color change break point
 plot_breakpoint = 6
+# adjust Gamma
+adjustGamma = True
 ############## END SETTINGS #######################
 
 # helper variables
@@ -65,6 +69,7 @@ print("###########  X1: {}".format(x1))
 print("###########  X2: {}".format(x2))
 print("###########  Y1: {}".format(y1))
 print("###########  Y2: {}".format(y2))
+print("###########  Adjust Gamma: {}".format(adjustGamma))
 
 # Check if video file exists
 if(os.path.isfile(video_file) == False):
@@ -104,7 +109,7 @@ length = int(capture.get(cv.CAP_PROP_FRAME_COUNT))
 print( "Video total frames: {}".format(length) )
 
 # https://makersportal.com/blog/2018/8/14/real-time-graphing-in-python
-def live_plotter(x_vec, y1_data, line1, ax, frame, save, plot_breakpoint, pause_time = 0.04):
+def live_plotter(x_vec, y1_data, line1, ax, frame, save, plot_breakpoint, mean_interval, pause_time = 0.04):
 
     if line1 == []:
         # this is the call to matplotlib that allows dynamic plotting
@@ -115,10 +120,11 @@ def live_plotter(x_vec, y1_data, line1, ax, frame, save, plot_breakpoint, pause_
         line1, = ax.plot(x_vec, y1_data, '-o', alpha = 0.8)
         #update plot label/title
         plt.ylabel('Moved pixels [%]')
-        plt.xlabel('Frames [5s Interval]')
-        plt.title('Pixel change')
+        plt.xlabel('Frames [{}s Interval]'.format(mean_interval))
         plt.ylim(0,15,0.5)
         plt.show()
+
+    plt.title('Pixel change {0:.2f}%'.format(y1_data[-1]))
 
     # change color if we drop lower than given threshold
     if(y1_data[-1] < plot_breakpoint):
@@ -151,6 +157,17 @@ def live_plotter(x_vec, y1_data, line1, ax, frame, save, plot_breakpoint, pause_
         plt.savefig(fname, dpi=None, facecolor='w', edgecolor='w', orientation='portrait', papertype=None, format=None, transparent=False, bbox_inches=None, pad_inches=0.1, frameon=None, metadata=None)    # return line so we can update it again in the next iteration
     return line1, ax
 
+# build a lookup table mapping the pixel values [0, 255] to
+# their adjusted gamma values
+invGamma = 1.0 / 1.2
+ltable = np.array([((i / 255.0) ** invGamma) * 255
+    for i in np.arange(0, 256)]).astype("uint8")
+
+# Somehow I found the value of `gamma=1.2` to be the best in my case
+def adjust_gamma(image, ltable):
+    # apply gamma correction using the lookup table
+    return cv.LUT(image, ltable)
+
 while True:
     # read video
     flag, frame = capture.read()
@@ -178,6 +195,8 @@ while True:
         #### Preprocessing ######
         # change image to grayscale
         roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
+        if (adjustGamma == True):
+            roi = adjust_gamma(roi, ltable)
         # equalize grayscale image
         #roi = cv.equalizeHist(roi)
         # add gaussian to remove noise
@@ -224,30 +243,33 @@ while True:
         n_white_pix = np.sum(img_output == 255)
         # save into our helper variable
         n_white_pix_sum = n_white_pix_sum + n_white_pix
+
         # set our frame counter forward
         second_count = second_count + 1
 
         # if 10 frames we output the plot
-        if (second_count == 5):
+        if (second_count == mean_interval):
             # mean and relative value to all pixels of the cropped frame
             relative_white = (n_white_pix_sum / second_count) /  n_all_px * 100
+
             # add value our vector
             y_vec.extend([relative_white])
             x_vec.extend([pos_frame])
 
             # create our live plot
-            w_pixel_array, ax = live_plotter(x_vec, y_vec, w_pixel_array, ax, pos_frame, save_plot, plot_breakpoint)
+            w_pixel_array, ax = live_plotter(x_vec, y_vec, w_pixel_array, ax, pos_frame, save_plot, plot_breakpoint, mean_interval)
 
             # move our vector forward
-            if (len(x_vec) > 500):
+            if (len(x_vec) > 1500):
                 y_vec.pop(0)
                 x_vec.pop(0)
 
             # reset helper
             n_white_pix_sum = 0
             second_count = 0
+            median_vec = []
 
-            print('Number of mean white pixels:', relative_white)
+            print('Number of mean white pixels: {0:.2f}%'.format(relative_white))
 
     else:
         #print "Frame is not ready"
