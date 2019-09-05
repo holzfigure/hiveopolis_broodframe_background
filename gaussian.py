@@ -43,6 +43,8 @@ shadow = False          # just returns detected shadows, we dont need it
 VarThreshold = 16       # standard 16
 # use sharpen algorithm, takes a lot of time and needs opencv4 (pip3 install opencv-python)
 sharpen = True
+# use to adjust Gamma
+adjustGamma = True
 ############## END SETTINGS #######################
 
 print("###########  SETTINGS  ##################")
@@ -55,6 +57,7 @@ print("###########  History: {}".format(history))
 print("###########  Shadow: {}".format(shadow))
 print("###########  VarThreshold: {}".format(VarThreshold))
 print("###########  Sharpen: {}".format(sharpen))
+print("###########  Adjust Gamma: {}".format(adjustGamma))
 
 # load CV BackgroundSubtractorMOG2 with settings
 # https://docs.opencv.org/master/d6/d17/group__cudabgsegm.html
@@ -95,6 +98,19 @@ print("#############################")
 print("Starting with total file number: " + str(len(array)))
 print("#############################")
 
+
+
+# build a lookup table mapping the pixel values [0, 255] to
+# their adjusted gamma values
+invGamma = 1.0 / 1.2
+ltable = np.array([((i / 255.0) ** invGamma) * 255
+    for i in np.arange(0, 256)]).astype("uint8")
+
+# Somehow I found the value of `gamma=1.2` to be the best in my case
+def adjust_gamma(image, ltable):
+    # apply gamma correction using the lookup table
+    return cv.LUT(image, ltable)
+
 # Return a sharpened version of the image, using an unsharp mask.
 # https://en.wikipedia.org/wiki/Unsharp_masking
 # https://homepages.inf.ed.ac.uk/rbf/HIPR2/unsharp.htm
@@ -123,7 +139,7 @@ for x in range(0, len(array)):
     # change image to grayscale
     img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     # equalize grayscale image
-    img = cv.equalizeHist(img)
+    # img = cv.equalizeHist(img)
     # add gaussian to remove noise
     #img = cv.GaussianBlur(img, (1, 1), 0)
     #img = cv.medianBlur(img, 1)
@@ -139,6 +155,15 @@ for x in range(0, len(array)):
     img_bgmodel = mog.getBackgroundImage();
 
     #### Postprocessing ######
+
+    # sharpens the image
+    if(sharpen == True):
+        img_bgmodel = unsharp_mask(img_bgmodel)
+
+    # adjust gamma if there is light change
+    if (adjustGamma == True):
+        img = adjust_gamma(img, ltable)
+
     # change image to grayscale
     # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     # equalize grayscale image
@@ -147,10 +172,9 @@ for x in range(0, len(array)):
     #img = cv.GaussianBlur(img, (1, 1), 0)
     #img = cv.medianBlur(img, 1)
     #img = cv.GaussianBlur(img, (7, 7), 1.5)
+
+    #img_bgmodel = cv.equalizeHist(img_bgmodel)
     #### END Preprocessing ######
-    # sharpens the image
-    if(sharpen == True):
-        img_bgmodel = unsharp_mask(img_bgmodel)
 
     # wite finished backgroundModels
     img_bg = img_path.replace(path_raw, path_output)
