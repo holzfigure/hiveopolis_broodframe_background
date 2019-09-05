@@ -4,6 +4,20 @@
 # of a series of pictures with the Gaussian Logic
 ########################################
 ########################################
+########################################
+# Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm.
+#
+# The class implements the Gaussian mixture model background subtraction described in:
+# (1) Z.Zivkovic, Improved adaptive Gausian mixture model for background subtraction, International Conference Pattern Recognition, UK, August, 2004,
+# The code is very fast and performs also shadow detection. Number of Gausssian components is adapted per pixel.
+#
+# (2) Z.Zivkovic, F. van der Heijden, Efficient Adaptive Density Estimation per Image Pixel for the Task of Background Subtraction,
+# Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006.
+# The algorithm similar to the standard Stauffer&Grimson algorithm with additional selection of the number of the Gaussian components based on:
+# Z.Zivkovic, F.van der Heijden, Recursive unsupervised learning of finite mixture models, IEEE Trans. on Pattern Analysis and Machine Intelligence,
+# vol.26, no.5, pages 651-656, 2004.
+########################################
+########################################
 
 # Basic libraries
 import numpy as np
@@ -24,9 +38,11 @@ max_runs = 0
 # print modulus, only used for output of text
 print_modulus = 10
 #### MOG Settings
-history = 200
-shadow = False
-VarThreshold = 16
+history = 200           # standard 200
+shadow = False          # just returns detected shadows, we dont need it
+VarThreshold = 16       # standard 16
+# use sharpen algorithm, takes a lot of time and needs opencv4 (pip3 install opencv-python)
+sharpen = True
 ############## END SETTINGS #######################
 
 print("###########  SETTINGS  ##################")
@@ -38,6 +54,7 @@ print("###########  Learning rate: {}".format(learning_rate))
 print("###########  History: {}".format(history))
 print("###########  Shadow: {}".format(shadow))
 print("###########  VarThreshold: {}".format(VarThreshold))
+print("###########  Sharpen: {}".format(sharpen))
 
 # load CV BackgroundSubtractorMOG2 with settings
 # https://docs.opencv.org/master/d6/d17/group__cudabgsegm.html
@@ -78,6 +95,21 @@ print("#############################")
 print("Starting with total file number: " + str(len(array)))
 print("#############################")
 
+# Return a sharpened version of the image, using an unsharp mask.
+# https://en.wikipedia.org/wiki/Unsharp_masking
+# https://homepages.inf.ed.ac.uk/rbf/HIPR2/unsharp.htm
+def unsharp_mask(image, kernel_size= (5, 5), sigma = 1.0, amount = 1.0, threshold = 0):
+    blurred = cv.GaussianBlur(image, kernel_size, sigma)
+    sharpened = float(amount + 1) * image - float(amount) * blurred
+    sharpened = np.maximum(sharpened, np.zeros(sharpened.shape))
+    sharpened = np.minimum(sharpened, 255 * np.ones(sharpened.shape))
+    sharpened = sharpened.round().astype(np.uint8)
+    if threshold > 0:
+        low_contrast_mask = np.absolute(image - blurred) < threshold
+        # opencv4 function copyTo
+        np.copyto(sharpened, image, where = low_contrast_mask)
+    return sharpened
+
 # loop x times as files in our folder
 for x in range(0, len(array)):
 
@@ -89,9 +121,9 @@ for x in range(0, len(array)):
 
     #### Preprocessing ######
     # change image to grayscale
-    #img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     # equalize grayscale image
-    #img = cv.equalizeHist(img)
+    img = cv.equalizeHist(img)
     # add gaussian to remove noise
     #img = cv.GaussianBlur(img, (1, 1), 0)
     #img = cv.medianBlur(img, 1)
@@ -106,6 +138,20 @@ for x in range(0, len(array)):
     # get background image
     img_bgmodel = mog.getBackgroundImage();
 
+    #### Postprocessing ######
+    # change image to grayscale
+    # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    # equalize grayscale image
+    # img = cv.equalizeHist(img)
+    # add gaussian to remove noise
+    #img = cv.GaussianBlur(img, (1, 1), 0)
+    #img = cv.medianBlur(img, 1)
+    #img = cv.GaussianBlur(img, (7, 7), 1.5)
+    #### END Preprocessing ######
+    # sharpens the image
+    if(sharpen == True):
+        img_bgmodel = unsharp_mask(img_bgmodel)
+
     # wite finished backgroundModels
     img_bg = img_path.replace(path_raw, path_output)
     cv.imwrite(img_bg, img_bgmodel)
@@ -116,6 +162,6 @@ for x in range(0, len(array)):
             break
 
     if (x % print_modulus == 0):
-        print("Load image: ", img_path + "\n Runs left: " + str(len(array)-x))
+        print("Current image: ", img_path + "\n Runs left: " + str(len(array)-x))
 
 # END
