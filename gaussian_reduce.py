@@ -105,33 +105,7 @@ def main(
     adjust_gamma=ADJUST_GAMMA,
 ):
 
-    print(
-        "======= SETTINGS =======\n"
-        f"Path raw:      {path_raw}\n"
-        f"Path output:   {path_out}\n"
-        f"Print modulus: {print_modulus}\n"
-        f"Max runs:      {max_runs}\n"
-        f"Learning rate: {learning_rate}\n"
-        f"History:       {history}\n"
-        f"Shadow:        {shadow}\n"
-        f"var_threshold: {var_threshold}\n"
-        f"Sharpen:       {sharpen}\n"
-        f"Adjust Gamma:  {adjust_gamma}\n"
-    )
-
-    # load CV BackgroundSubtractorMOG2 with settings
-    # https://docs.opencv.org/3.4/d1/dc5/tutorial_background_subtraction.html
-    # https://docs.opencv.org/master/d6/d17/group__cudabgsegm.html
-    # attributes found inside Class
-    # 'setBackgroundRatio', 'setComplexityReductionThreshold',
-    # 'setDetectShadows', 'setHistory', 'setNMixtures',
-    # 'setShadowThreshold', 'setShadowValue', 'setVarInit', 'setVarMax',
-    # 'setVarMin', 'setVarThreshold', 'setVarThresholdGen'
-    mog = cv.createBackgroundSubtractorMOG2()
-    mog.setDetectShadows(shadow)
-    mog.setHistory(history)
-    mog.setVarThreshold(var_threshold)
-
+    # Check whether input path is available
     # if not os.path.isdir(path_raw):
     if not path_raw.is_dir():
         print(f"Error: Missing folder {path_raw}, now leaving..")
@@ -139,21 +113,11 @@ def main(
         # sys.exit(1)
         raise SystemExit(1)
 
-    # TODO: Find pathlib way of doing this: key=os.path.getmtime
-    #       p.stat().st_mtime
-    # load all img as array reverse sorted with oldest at beginning
-    # img name: e.g. pi1_hive1broodn_1_8_0_0_3.jpg
-    array = sorted(glob.iglob(path_raw + '/*.jpg'),
-                   key=os.path.getmtime, reverse=True)
-    # Try this:
-    # array = sorted(path_raw.rglob("*.jpg"),
-    #                key=os.path.getmtime, reverse=True)
-
-
     # Create output folder
     # try:
-    if not os.path.isdir(path_out):
-        os.mkdir(path_out)
+    # if not os.path.isdir(path_out):
+    if not path_out.is_dir():
+        path_out.mkdir()  # parents=True)
     # except:
     else:
         print(f"Folder '{path_out}' already exists")
@@ -169,6 +133,65 @@ def main(
                 except Exception as e:
                     print(e)
             print("Files deleted")
+
+    print(
+        "======= SETTINGS =======\n"
+        f"Path raw:      {path_raw}\n"
+        f"Path output:   {path_out}\n"
+        f"Print modulus: {print_modulus}\n"
+        f"Max runs:      {max_runs}\n"
+        f"Learning rate: {learning_rate}\n"
+        f"History:       {history}\n"
+        f"Shadow:        {shadow}\n"
+        f"var_threshold: {var_threshold}\n"
+        f"Sharpen:       {sharpen}\n"
+        f"Adjust Gamma:  {adjust_gamma}\n"
+    )
+
+    # Load CV BackgroundSubtractorMOG2 with settings
+    # https://docs.opencv.org/3.4/d1/dc5/tutorial_background_subtraction.html
+    # https://docs.opencv.org/master/d6/d17/group__cudabgsegm.html
+    # Attributes found inside Class
+    # 'setBackgroundRatio', 'setComplexityReductionThreshold',
+    # 'setDetectShadows', 'setHistory', 'setNMixtures',
+    # 'setShadowThreshold', 'setShadowValue', 'setVarInit', 'setVarMax',
+    # 'setVarMin', 'setVarThreshold', 'setVarThresholdGen'
+    mog = cv.createBackgroundSubtractorMOG2()
+    mog.setDetectShadows(shadow)
+    mog.setHistory(history)
+    mog.setVarThreshold(var_threshold)
+
+    # Process all folders
+    folders = sorted(path_raw.glob("Photos_of_Pi*"))
+    print(f"Number of folders: {len(folders)}")
+
+    for folder in folders:
+        # mtime = folder.stat().st_mtime
+
+        # Parse time from foldernames
+        # Folder name e.g.: Photos_of_Pi1_1_9_2019
+        # t_str = folder.name.split("Photos_of_Pi")[-1][2:]  # heating!!
+        t_str = "_".join(folder.name.split("_")[-3:])
+        pdt = datetime.strptime(t_str, '%d_%m_%Y')
+
+        # Parse time from filenames
+        pt = datetime.strptime(tstr, '%d_%m_%H_%M_%S')
+        # TODO: set year to 2019
+
+
+
+    # TODO: Find pathlib way of doing this: key=os.path.getmtime
+    #       p.stat().st_mtime
+    # load all img as array reverse sorted with oldest at beginning
+    # Image name e.g.: pi1_hive1broodn_1_8_0_0_3.jpg
+
+    # array = sorted(glob.iglob(path_raw + '/*.jpg'),
+    #                key=os.path.getmtime, reverse=True)
+    # Try this:
+    # array = sorted(path_raw.rglob("*.jpg"),
+    #                key=os.path.getmtime, reverse=True)
+
+
 
     print("#############################")
     print("Starting with total file number: " + str(len(array)))
