@@ -9,7 +9,7 @@ import pytz
 
 PATH_IN = Path("/media/holzfigure/Data/NAS/NAS_incoming_data")
 PATH_OUT = Path(
-    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis" /
+    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
     "broodnest_obs/hive1"
 )
 
