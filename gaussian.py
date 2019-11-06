@@ -136,9 +136,15 @@ def main(
         # sys.exit(1)
         raise SystemExit(1)
 
+    # TODO: Find pathlib way of doing this: key=os.path.getmtime
+    #       p.stat().st_mtime
     # load all img as array reverse sorted with oldest at beginning
     array = sorted(glob.iglob(path_raw + '/*.jpg'),
                    key=os.path.getmtime, reverse=True)
+    # Try this:
+    # array = sorted(path_raw.rglob("*.jpg"),
+    #                key=os.path.getmtime, reverse=True)
+
 
     # Create output folder
     # try:
