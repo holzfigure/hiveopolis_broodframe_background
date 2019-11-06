@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Rename files such that timestamps are in UTC and sort correctly."""
-import os
+# import os
 import shutil
 from pathlib import Path
 from datetime import datetime
@@ -46,7 +46,9 @@ def get_utc_timestrings(fn, year=YEAR, local_tz=LOCAL_TZ,
 def main(path_in=PATH_IN, path_out=PATH_OUT):
     """Iterate over all broodnest photos and rename them."""
     # Iterate over all images
+    n = 0
     for file in path_in.rglob("pi*_hive1broodn_*.jpg"):
+        n += 1
 
         # Get nice UTC timestrings
         t_str, day_str = get_utc_timestrings(file.name)
@@ -69,6 +71,8 @@ def main(path_in=PATH_IN, path_out=PATH_OUT):
         # Copy the file (while attempting to keep metadata)
         shutil.copy2(file, outfile)
 
+        if n % 1000 == 0:
+            print(f"Handled {n} files for now..")
 
 
 if __name__ == "__main__":
