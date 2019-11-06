@@ -18,7 +18,7 @@ YEAR = 2019
 LOCAL_TZ = pytz.timezone("Europe/Vienna")
 TIME_FMT = "%y%m%d-%H%M%S-utc"
 DAY_FMT = "%y%m%d"
-WRONG_FMT = "%d_%m_%H_%M_%S"
+WRONG_FMT = "%d_%m_%H_%M_%S.jpg"
 
 
 def get_utc_timestrings(fn, year=YEAR, local_tz=LOCAL_TZ,
