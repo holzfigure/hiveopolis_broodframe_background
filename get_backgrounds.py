@@ -273,7 +273,7 @@ def file_datetime(
     """Parse UTC datetime object from filename."""
     # Extract the timestring from the filename
     # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-    t_str = filename.split("hive1broodn_")[-1]
+    t_str = filename.split("broodn_")[-1]
     # TODO: Make this more robust for full pathlib Path objects?
 
     # Parse it into a datetime object
