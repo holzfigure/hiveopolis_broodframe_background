@@ -446,7 +446,7 @@ def get_target_dfs(
 
                 # Attempt building target_df
                 df = pack_dataframe(dt_targ, times, paths)
-                if df:
+                if df is not None:
                     target_dfs.append(df)
                     # Export CSV of the timestamped filepaths
                     export_csv(df, dt_targ)
