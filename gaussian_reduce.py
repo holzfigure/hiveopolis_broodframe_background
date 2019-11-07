@@ -25,18 +25,38 @@ import glob
 from pathlib import Path
 from datetime import datetime
 
+import pytz
 import numpy as np
 # open cv, we have to load V3 for full list of algorithms
 # https://docs.opencv.org/3.4
 import cv2 as cv
 
+import iohelp as ioh
 
 # SETTINGS
 # Path to raw files and output folder of generated images
 # PATH_RAW = Path.cwd() / 'img'
 # PATH_OUT = Path.cwd() / 'out'
 PATH_RAW = Path("/media/holzfigure/Data/NAS/NAS_incoming_data")
-PATH_OUT = Path("/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis")
+PATH_OUT = Path(
+    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
+    "broodnest_obs/backgrounds"
+)
+# Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
+INFILE_PATTERN = "pi*_hivebroodn_*.jpg"
+# Foldername e.g.:  Photos_of_Pi1_1_9_2019
+# Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
+INFOLDER_PATTERN = "Photos_of_Pi*/"
+
+# TIME-RELATED PARAMETERS
+EXPORT_HOURS_UTC = [2, 6, 10, 14, 18, 22]
+YEAR = 2019
+# LOCAL_TZ = pytz.timezone("Etc/UTC")
+LOCAL_TZ = pytz.timezone("Europe/Vienna")
+TIME_FMT = "%y%m%d-%H%M%S-utc"
+DAY_FMT = "day-%y%m%d"
+TIME_INFILE_FMT = "%d_%m_%H_%M_%S.jpg"
+TIME_INFOLDER_FMT = "%d_%m_%Y"
 
 # https://docs.opencv.org/master/d7/df6/
 # classcv_1_1BackgroundSubtractor.html#aa735e76f7069b3fa9c3f32395f9ccd21
@@ -92,9 +112,78 @@ def unsharp_mask(image, kernel_size=(5, 5), sigma=1.0,
     return sharpened
 
 
+def folder_datetime(foldername, time_infolder_fmt=TIME_INFOLDER_FMT):
+    """Parse UTC datetime from foldername.
+
+    Foldername e.g.:  Photos_of_Pi1_1_9_2019/
+                      Photos_of_Pi2_heating_1_11_2019/
+    """
+    # t_str = folder.name.split("Photos_of_Pi")[-1][2:]  # heating!!
+    t_str = "_".join(foldername.split("_")[-3:])
+    day_naive = datetime.strptime(t_str, time_infolder_fmt)
+    # Localize as UTC
+    # day_local = local_tz.localize(day_naive)
+    # dt_utc = day_local.astimezone(pytz.utc)
+    day = pytz.utc.localize(day_naive)
+
+    return day
+
+
+def file_datetime(
+        filename,  # type <str>  # path.name
+        year=YEAR,
+        local_tz=LOCAL_TZ,
+        # filetag=INFILE_TAG,
+        time_infile_fmt=TIME_INFILE_FMT,
+):
+    """Parse UTC datetime object from filename."""
+    # Extract the timestring from the filename
+    # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
+    t_str = filename.split("hive1broodn_")[-1]
+    # TODO: Make this more robust for full pathlib Path objects?
+
+    # Parse it into a datetime object
+    dt_naive = datetime.strptime(
+            t_str, time_infile_fmt).replace(year=year)
+
+    # Localize and convert to UTC
+    dt_local = local_tz.localize(dt_naive)
+    dt_utc = dt_local.astimezone(pytz.utc)
+
+    return dt_utc
+
+
+def assemble_timestamps(filelist, year=YEAR):
+    """Return a list of timestamps of the same length as the filelist."""
+
+    timestamps = []
+    failures = []
+    filelist_out = []
+    for file in filelist:
+        try:
+            # parse timestamp
+            timestamps.append(file_datetime(file.name, year=year))
+            filelist_out.append(file)
+        except Exception as err:
+            print(f"Error: Couldn't parse timestamp of file '{file}': {err}")
+            failures.append(file)
+
+    if len(failures) > 0:
+        print("Failed files:")
+        for fail in failures:
+            print(f"{fail}")
+
+    return np.array(timestamps).astype("datetime64"), filelist_out
+
+
 def main(
     path_raw=PATH_RAW,
     path_out=PATH_OUT,
+    file_pattern=INFILE_PATTERN,
+    folder_pattern=INFOLDER_PATTERN,
+    # time_infile_fmt=TIME_INFILE_FMT,
+    # time_infolder_fmt=TIME_INFOLDER_FMT,
+    export_hours=EXPORT_HOURS_UTC,
     learning_rate=LEARNING_RATE,
     max_runs=MAX_RUNS,
     print_modulus=PRINT_MODULUS,
@@ -162,21 +251,54 @@ def main(
     mog.setVarThreshold(var_threshold)
 
     # Process all folders
-    folders = sorted(path_raw.glob("Photos_of_Pi*"))
+    folders = sorted(path_raw.glob(folder_pattern))
     print(f"Number of folders: {len(folders)}")
 
     for folder in folders:
         # mtime = folder.stat().st_mtime
+        day = folder_datetime(folder.name)
 
-        # Parse time from foldernames
-        # Folder name e.g.: Photos_of_Pi1_1_9_2019
-        # t_str = folder.name.split("Photos_of_Pi")[-1][2:]  # heating!!
-        t_str = "_".join(folder.name.split("_")[-3:])
-        pdt = datetime.strptime(t_str, '%d_%m_%Y')
+        # Assemble preliminary list of files matching the pattern
+        # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
+        filelist = folder.glob(file_pattern)
 
-        # Parse time from filenames
-        pt = datetime.strptime(tstr, '%d_%m_%H_%M_%S')
-        # TODO: set year to 2019
+        hour_dict = get_hour_dict(filelist, day)
+
+        if len(filelist) > history:
+            # Get the timestamps and a corresponding filelist
+            timestamps, filelist = assemble_timestamps(
+                    filelist, year=day.year)
+
+            for hour in export_hours:
+
+                # Get a target datetime object (i.e. the desired hour)
+                dt_target = day.replace(hour=hour)
+
+                # Compute time-difference to all timestamps
+                d_seconds = []
+                # TODO: Do this with sth like "apply_func" or so instead?
+                for ts in timestamps:
+                    d_seconds.append((ts - dt_target).total_seconds())
+                    # d_seconds.append(abs((ts - dt_target).total_seconds()))
+                # Take absolute time-diffs
+                d_seconds = np.absolute(d_seconds)
+
+                # Find minimum of absolute deltas
+                min_idx = np.argmin(d_seonds)
+                abs_delta = d_seconds[min_idx]
+
+                if (abs_delta < hour_tolerance) and (min_idx > history):
+                    closest_time = timestamps[min_idx]
+                    closest_file = filelist[min_idx]
+                # Make sure it's meaningful (closer than THRESH..)
+
+                # Make sure it has a long enough HISTORY..
+
+
+
+        else:  # Skip folder
+            print(f"WARNING: Folder '{folder}' doesn't contain enough data: "
+                  f"{len(filelist)} files < {history} minimally required.")
 
 
 
