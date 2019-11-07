@@ -50,10 +50,10 @@ DEPENDENCIES = [
 PATH_RAW = Path("/media/holzfigure/Data/NAS/NAS_incoming_data")
 PATH_OUT = Path(
     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
-    "broodnest_obs/backgrounds"
+    "broodnest_bgs"
 )
 # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-INFILE_PATTERN = "pi*_hivebroodn_*.jpg"
+INFILE_PATTERN = "pi*_hive*broodn_*.jpg"
 # Foldername e.g.:  Photos_of_Pi1_1_9_2019
 # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
 INFOLDER_PATTERN = "Photos_of_Pi*/"
