@@ -194,12 +194,6 @@ def initialize_io(dir_in=PATH_RAW, dir_out=PATH_OUT,
     dir_out = Path(dir_out)
     logging.info(f"input from {dir_in}, output to {dir_out}")
 
-    # Create image output directory
-    # dir_img = hh.safename(os.path.join(dir_out, "imgs"), "dir")
-    dir_img = Path(ioh.safename(str(dir_out / "imgs"), "dir"))
-    if not dir_img.is_dir():
-        dir_img.mkdir()
-
     # Display Python version and system info
     # TODO: Move this into holzhelp when doing overhaul
     logging.info(f"Python {platform.python_version()} " +
