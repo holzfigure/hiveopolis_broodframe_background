@@ -21,7 +21,7 @@ described in:
 
 # Basic libraries
 import os
-import glob
+# import glob
 import logging
 import argparse
 import platform
@@ -57,14 +57,16 @@ INFILE_PATTERN = "pi*_hivebroodn_*.jpg"
 # Foldername e.g.:  Photos_of_Pi1_1_9_2019
 # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
 INFOLDER_PATTERN = "Photos_of_Pi*/"
+OUTCSV_PREFIX = "bgx"
 
 # TIME-RELATED PARAMETERS
-EXPORT_HOURS_UTC = [2, 6, 10, 14, 18, 22]  # must be sorted!
+EXPORT_HOURS_UTC = [2, 8, 14, 20]  # must be sorted!
 TOLERANCE_TIME_SEC = 60 * 60  # 1 hour
 YEAR = 2019
 # LOCAL_TZ = pytz.timezone("Etc/UTC")
 LOCAL_TZ = pytz.timezone("Europe/Vienna")
 TIME_FMT = "%y%m%d-%H%M%S-utc"
+TIME_TARGET_FMT = "%y%m%d-%H"
 DAY_FMT = "day-%y%m%d"
 TIME_INFILE_FMT = "%d_%m_%H_%M_%S.jpg"
 TIME_INFOLDER_FMT = "%d_%m_%Y"
@@ -213,8 +215,8 @@ def initialize_io(dir_in=PATH_RAW, dir_out=PATH_OUT,
     # Display versions of used third-party libraries
     # logging.info("matplotlib version: {}".format(matplotlib.__version__))
     # logging.info(f"matplotlib version: {matplotlib.__version__}")
-    # logging.info(f"pandas version: {pd.__version__}")
     logging.info(f"numpy version: {np.__version__}")
+    logging.info(f"pandas version: {pd.__version__}")
     # logging.info(f"networkx version: {nx.__version__}")
     logging.info(f"OpenCV version: {cv.__version__}")
 
@@ -374,14 +376,49 @@ def pack_dataframe(dt_targ, times, paths,
     return df
 
 
-def export_csv(df):
+def export_csv(df, dt_targ,
+               path_out=PATH_OUT,
+               time_fmt=TIME_FMT,
+               time_targ_fmt=TIME_TARGET_FMT,
+               prefix=OUTCSV_PREFIX,
+               ):
     """Write the timestamped filepath array to CSV."""
     # TODO: Build paths and nice names
-    pd.write_csv(df)
+    file = df["path"][-1]
+    time = df.index[-1]
+    # folder = file.parent.name
+    # Foldername e.g.:  Photos_of_Pi1_1_9_2019
+    # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
+    # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
+    trunc = file.name.split("broodn")[0]
+    rpi = int(trunc.split("pi")[-1][0])
+    hive = int(trunc.split("hive")[-1][0])
+
+    targ_str = dt_targ.strftime(time_targ_fmt)
+    time_str = time.strftime(time_fmt)
+
+    # Set up output folder
+    dir_out = path_out / f"csv/rpi{rpi}"
+    if not dir_out.is_dir():
+        dir_out.mkdir(parents=True)
+        logging.info("Created folder '{dir_out}'")
+
+    # Build filename
+    fn = f"{prefix}_hive{hive}_rpi{rpi}_targ{targ_str}_{time_str}.csv"
+    ffn = ioh.safename((dir_out / fn), "file")
+
+    # Export CSV
+    df.to_csv(
+            ffn,
+            # index_label="time",
+            # date_format=time_fmt,
+    )
+    logging.info(f"Exported CSV to {ffn}")
+
     return None
 
 
-def get_target_dataframes(
+def get_target_dfs(
         filelist,
         day,
         export_hours=EXPORT_HOURS_UTC,
@@ -412,7 +449,7 @@ def get_target_dataframes(
                 if df:
                     target_dfs.append(df)
                     # Export CSV of the timestamped filepaths
-                    export_csv(df)
+                    export_csv(df, dt_targ)
                 else:
                     logging.error(f"Skipped target '{dt_targ}'")
 
@@ -491,165 +528,164 @@ def main(
                           key=os.path.getmtime)
         logging.info(f"Found {len(filelist)} files.")
 
-        hour_dicts = get_hour_dicts(filelist, day)
+        target_dfs = get_target_dfs(filelist, day)
 
-        if len(filelist) > history:
-            # Get the timestamps and a corresponding filelist
-            timestamps, filelist = assemble_timestamps(
-                    filelist, year=day.year)
-
-            for hour in export_hours:
-
-                # Get a target datetime object (i.e. the desired hour)
-                dt_target = day.replace(hour=hour)
-
-                # Compute time-difference to all timestamps
-                d_seconds = []
-                # TODO: Do this with sth like "apply_func" or so instead?
-                for ts in timestamps:
-                    d_seconds.append((ts - dt_target).total_seconds())
-                    # d_seconds.append(abs((ts - dt_target).total_seconds()))
-                # Take absolute time-diffs
-                d_seconds = np.absolute(d_seconds)
-
-                # Find minimum of absolute deltas
-                min_idx = np.argmin(d_seconds)
-                abs_delta = d_seconds[min_idx]
-
-                if (abs_delta < hour_tolerance) and (min_idx > history):
-                    closest_time = timestamps[min_idx]
-                    closest_file = filelist[min_idx]
-                # Make sure it's meaningful (closer than THRESH..)
-
-                # Make sure it has a long enough HISTORY..
-
-
-
-        else:  # Skip folder
-            logging.info(f"WARNING: Folder '{folder}' doesn't contain enough data: "
-                  f"{len(filelist)} files < {history} minimally required.")
-
-
-
-
-    logging.info(
-        "======= SETTINGS =======\n"
-        f"Path raw:      {path_raw}\n"
-        f"Path output:   {path_out}\n"
-        f"Print modulus: {print_modulus}\n"
-        f"Max runs:      {max_runs}\n"
-        f"Learning rate: {learning_rate}\n"
-        f"History:       {history}\n"
-        f"Shadow:        {shadow}\n"
-        f"var_threshold: {var_threshold}\n"
-        f"Sharpen:       {sharpen}\n"
-        f"Adjust Gamma:  {adjust_gamma}\n"
-    )
-
-    # Load CV BackgroundSubtractorMOG2 with settings
-    # https://docs.opencv.org/3.4/d1/dc5/tutorial_background_subtraction.html
-    # https://docs.opencv.org/master/d6/d17/group__cudabgsegm.html
-    # Attributes found inside Class
-    # 'setBackgroundRatio', 'setComplexityReductionThreshold',
-    # 'setDetectShadows', 'setHistory', 'setNMixtures',
-    # 'setShadowThreshold', 'setShadowValue', 'setVarInit', 'setVarMax',
-    # 'setVarMin', 'setVarThreshold', 'setVarThresholdGen'
-    mog = cv.createBackgroundSubtractorMOG2()
-    mog.setDetectShadows(shadow)
-    mog.setHistory(history)
-    mog.setVarThreshold(var_threshold)
-
-
-    # TODO: Find pathlib way of doing this: key=os.path.getmtime
-    #       p.stat().st_mtime
-    # load all img as array reverse sorted with oldest at beginning
-    # Image name e.g.: pi1_hive1broodn_1_8_0_0_3.jpg
-
-    # array = sorted(glob.iglob(path_raw + '/*.jpg'),
-    #                key=os.path.getmtime, reverse=True)
-    # Try this:
-    # array = sorted(path_raw.rglob("*.jpg"),
-    #                key=os.path.getmtime, reverse=True)
+        # if len(filelist) > history:
+        #     # Get the timestamps and a corresponding filelist
+        #     timestamps, filelist = assemble_timestamps(
+        #             filelist, year=day.year)
+        #
+        #     for hour in export_hours:
+        #
+        #         # Get a target datetime object (i.e. the desired hour)
+        #         dt_target = day.replace(hour=hour)
+        #
+        #         # Compute time-difference to all timestamps
+        #         d_seconds = []
+        #         # TODO: Do this with sth like "apply_func" or so instead?
+        #         for ts in timestamps:
+        #             d_seconds.append((ts - dt_target).total_seconds())
+        #             # d_seconds.append(abs((ts - dt_target).total_seconds()))
+        #         # Take absolute time-diffs
+        #         d_seconds = np.absolute(d_seconds)
+        #
+        #         # Find minimum of absolute deltas
+        #         min_idx = np.argmin(d_seconds)
+        #         abs_delta = d_seconds[min_idx]
+        #
+        #         if (abs_delta < hour_tolerance) and (min_idx > history):
+        #             closest_time = timestamps[min_idx]
+        #             closest_file = filelist[min_idx]
+        #         # Make sure it's meaningful (closer than THRESH..)
+        #
+        #         # Make sure it has a long enough HISTORY..
+        #
+        # else:  # Skip folder
+        #     logging.info(
+        #         f"WARNING: Folder '{folder}' doesn't contain enough data: "
+        #         f"{len(filelist)} files < {history} minimally required."
+        #     )
 
 
 
-    print("#############################")
-    logging.info("Starting with total file number: " + str(len(array)))
-    print("#############################")
-
-    # Build a lookup table mapping the pixel values [0, 255] to
-    # their adjusted gamma values
-    # Somehow I found the value of `gamma=1.2` to be the best in my case
-    inv_gamma = 1.0 / 1.2
-    ltable = np.array([
-        ((i / 255.0) ** inv_gamma) * 255
-        for i in np.arange(0, 256)]).astype("uint8")
-
-    # loop x times as files in our folder
-    for x in range(len(array)):
-
-        # We can loop now through our array of images
-        img_path = array[x]
-
-        # Read file with OpenCV
-        img = cv.imread(img_path)
-
-        # Preprocessing ######
-        # Change image to grayscale
-        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        # Equalize grayscale image
-        # img = cv.equalizeHist(img)
-        # Add gaussian to remove noise
-        # img = cv.GaussianBlur(img, (1, 1), 0)
-        # img = cv.medianBlur(img, 1)
-        # img = cv.GaussianBlur(img, (7, 7), 1.5)
-        # END Preprocessing ######
-
-        # Apply algorithm to generate background model
-        img_output = mog.apply(img, learning_rate)
-        logging.info(f"img_out: {img_output}")
-        # Threshold for foreground mask, we don't use the
-        # foreground mask so we dont need it?
-        # img_output = cv.threshold(img_output, 10, 255, cv.THRESH_BINARY);
-
-        # Get background image
-        img_bgmodel = mog.getBackgroundImage()
-
-        # Postprocessing ######
-
-        # Sharpen the image
-        if sharpen:
-            img_bgmodel = unsharp_mask(img_bgmodel)
-
-        # Adjust gamma if there is light change
-        if adjust_gamma:
-            img = adjust_gamma(img, ltable)
-
-        # Change image to grayscale
-        # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        # Equalize grayscale image
-        # img = cv.equalizeHist(img)
-        # Add gaussian to remove noise
-        # img = cv.GaussianBlur(img, (1, 1), 0)
-        # img = cv.medianBlur(img, 1)
-        # img = cv.GaussianBlur(img, (7, 7), 1.5)
-
-        # img_bgmodel = cv.equalizeHist(img_bgmodel)
-        # END Preprocessing ######
-
-        # Write finished backgroundModels
-        img_bg = img_path.replace(path_raw, path_out)
-        cv.imwrite(img_bg, img_bgmodel)
-
-        # Break if max runs is defined and reached
-        if max_runs > 0:
-            if x == max_runs:
-                break
-
-        if (x % logging.info_modulus) == 0:
-            logging.info(f"Current image: {img_path}\nRuns left: {len(array)-x}")
-
-    # END
+    # logging.info(
+    #     "======= SETTINGS =======\n"
+    #     f"Path raw:      {path_raw}\n"
+    #     f"Path output:   {path_out}\n"
+    #     f"Print modulus: {print_modulus}\n"
+    #     f"Max runs:      {max_runs}\n"
+    #     f"Learning rate: {learning_rate}\n"
+    #     f"History:       {history}\n"
+    #     f"Shadow:        {shadow}\n"
+    #     f"var_threshold: {var_threshold}\n"
+    #     f"Sharpen:       {sharpen}\n"
+    #     f"Adjust Gamma:  {adjust_gamma}\n"
+    # )
+    #
+    # # Load CV BackgroundSubtractorMOG2 with settings
+    # # https://docs.opencv.org/3.4/d1/dc5/tutorial_background_subtraction.html
+    # # https://docs.opencv.org/master/d6/d17/group__cudabgsegm.html
+    # # Attributes found inside Class
+    # # 'setBackgroundRatio', 'setComplexityReductionThreshold',
+    # # 'setDetectShadows', 'setHistory', 'setNMixtures',
+    # # 'setShadowThreshold', 'setShadowValue', 'setVarInit', 'setVarMax',
+    # # 'setVarMin', 'setVarThreshold', 'setVarThresholdGen'
+    # mog = cv.createBackgroundSubtractorMOG2()
+    # mog.setDetectShadows(shadow)
+    # mog.setHistory(history)
+    # mog.setVarThreshold(var_threshold)
+    #
+    #
+    # # TODO: Find pathlib way of doing this: key=os.path.getmtime
+    # #       p.stat().st_mtime
+    # # load all img as array reverse sorted with oldest at beginning
+    # # Image name e.g.: pi1_hive1broodn_1_8_0_0_3.jpg
+    #
+    # # array = sorted(glob.iglob(path_raw + '/*.jpg'),
+    # #                key=os.path.getmtime, reverse=True)
+    # # Try this:
+    # # array = sorted(path_raw.rglob("*.jpg"),
+    # #                key=os.path.getmtime, reverse=True)
+    #
+    #
+    #
+    # print("#############################")
+    # logging.info("Starting with total file number: " + str(len(array)))
+    # print("#############################")
+    #
+    # # Build a lookup table mapping the pixel values [0, 255] to
+    # # their adjusted gamma values
+    # # Somehow I found the value of `gamma=1.2` to be the best in my case
+    # inv_gamma = 1.0 / 1.2
+    # ltable = np.array([
+    #     ((i / 255.0) ** inv_gamma) * 255
+    #     for i in np.arange(0, 256)]).astype("uint8")
+    #
+    # # loop x times as files in our folder
+    # for x in range(len(array)):
+    #
+    #     # We can loop now through our array of images
+    #     img_path = array[x]
+    #
+    #     # Read file with OpenCV
+    #     img = cv.imread(img_path)
+    #
+    #     # Preprocessing ######
+    #     # Change image to grayscale
+    #     img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    #     # Equalize grayscale image
+    #     # img = cv.equalizeHist(img)
+    #     # Add gaussian to remove noise
+    #     # img = cv.GaussianBlur(img, (1, 1), 0)
+    #     # img = cv.medianBlur(img, 1)
+    #     # img = cv.GaussianBlur(img, (7, 7), 1.5)
+    #     # END Preprocessing ######
+    #
+    #     # Apply algorithm to generate background model
+    #     img_output = mog.apply(img, learning_rate)
+    #     logging.info(f"img_out: {img_output}")
+    #     # Threshold for foreground mask, we don't use the
+    #     # foreground mask so we dont need it?
+    #     # img_output = cv.threshold(img_output, 10, 255, cv.THRESH_BINARY);
+    #
+    #     # Get background image
+    #     img_bgmodel = mog.getBackgroundImage()
+    #
+    #     # Postprocessing ######
+    #
+    #     # Sharpen the image
+    #     if sharpen:
+    #         img_bgmodel = unsharp_mask(img_bgmodel)
+    #
+    #     # Adjust gamma if there is light change
+    #     if adjust_gamma:
+    #         img = adjust_gamma(img, ltable)
+    #
+    #     # Change image to grayscale
+    #     # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    #     # Equalize grayscale image
+    #     # img = cv.equalizeHist(img)
+    #     # Add gaussian to remove noise
+    #     # img = cv.GaussianBlur(img, (1, 1), 0)
+    #     # img = cv.medianBlur(img, 1)
+    #     # img = cv.GaussianBlur(img, (7, 7), 1.5)
+    #
+    #     # img_bgmodel = cv.equalizeHist(img_bgmodel)
+    #     # END Preprocessing ######
+    #
+    #     # Write finished backgroundModels
+    #     img_bg = img_path.replace(path_raw, path_out)
+    #     cv.imwrite(img_bg, img_bgmodel)
+    #
+    #     # Break if max runs is defined and reached
+    #     if max_runs > 0:
+    #         if x == max_runs:
+    #             break
+    #
+    #     if (x % logging.info_modulus) == 0:
+    #         logging.info(f"Current image: {img_path}\nRuns left: {len(array)-x}")
+    #
+    # # END
 
 
 if __name__ == "__main__":
