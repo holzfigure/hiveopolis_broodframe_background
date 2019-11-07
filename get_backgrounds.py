@@ -401,7 +401,7 @@ def export_csv(df, dt_targ,
     dir_out = path_out / f"csv/rpi{rpi}"
     if not dir_out.is_dir():
         dir_out.mkdir(parents=True)
-        logging.info("Created folder '{dir_out}'")
+        logging.info(f"Created folder '{dir_out}'")
 
     # Build filename
     fn = f"{prefix}_hive{hive}_rpi{rpi}_targ{targ_str}_{time_str}.csv"
@@ -421,6 +421,7 @@ def export_csv(df, dt_targ,
 def get_target_dfs(
         filelist,
         day,
+        path_out,
         export_hours=EXPORT_HOURS_UTC,
         tol_time=TOLERANCE_TIME_SEC,
         history=HISTORY,
@@ -449,7 +450,7 @@ def get_target_dfs(
                 if df is not None:
                     target_dfs.append(df)
                     # Export CSV of the timestamped filepaths
-                    export_csv(df, dt_targ)
+                    export_csv(df, dt_targ, path_out)
                 else:
                     logging.error(f"Skipped target '{dt_targ}'")
 
@@ -510,11 +511,16 @@ def main(
     path_raw, path_out = initialize_io()
 
     # Process all subfolders containing broodnest photos
-    folders = sorted(path_raw.glob(folder_pattern))
-    logging.info(f"Number of folders: {len(folders)}")
+    # Reverse order to get the newest folders first
+    folders = sorted(path_raw.glob(folder_pattern),
+                     key=os.path.getmtime, reverse=True)
+    n_folders = len(folders)
+    logging.info(f"Number of folders: {n_folders}")
 
+    i = 0
     for folder in folders:
-        logging.info(f"Processing folder '{folder.name}'")
+        i += 1
+        logging.info(f"Processing folder {i}/{n_folders}: '{folder.name}'")
 
         # Get the day as UTC datetime object
         # mtime = folder.stat().st_mtime
@@ -528,7 +534,7 @@ def main(
                           key=os.path.getmtime)
         logging.info(f"Found {len(filelist)} files.")
 
-        target_dfs = get_target_dfs(filelist, day)
+        target_dfs = get_target_dfs(filelist, day, path_out)
 
         # if len(filelist) > history:
         #     # Get the timestamps and a corresponding filelist
