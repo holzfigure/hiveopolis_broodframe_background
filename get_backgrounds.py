@@ -387,6 +387,7 @@ def export_csv(df, dt_targ,
     trunc = file.name.split("broodn")[0]
     rpi = int(trunc.split("pi")[-1][0])
     hive = int(trunc.split("hive")[-1][0])
+    logging.debug(f"filename: {file.name}, rpi={rpi}, hive={hive}")
 
     targ_str = dt_targ.strftime(time_targ_fmt)
     time_str = time.strftime(time_fmt)
