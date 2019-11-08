@@ -392,7 +392,7 @@ def export_csv(df, dt_targ,
     time_str = time.strftime(time_fmt)
 
     # Set up output folder
-    dir_out = path_out / f"csv/rpi{rpi}"
+    dir_out = path_out / f"csv/hive{hive}/rpi{rpi}"
     if not dir_out.is_dir():
         dir_out.mkdir(parents=True)
         logging.info(f"Created folder '{dir_out}'")
