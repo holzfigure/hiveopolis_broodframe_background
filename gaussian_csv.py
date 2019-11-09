@@ -334,7 +334,7 @@ def extract_background(
     # TODO: Here fix the folder structure once hive and rpi...
     # TODO: Here fix filename prefixes as well
     if not path_out.is_dir():
-        path_out.mkdir(Parents=True)
+        path_out.mkdir(parents=True)
         logging.info(f"Created folder '{path_out}'")
     logging.info(f"Received {n_files} in '{in_folder}', "
                  f"exporting to '{path_out}'")
