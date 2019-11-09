@@ -440,7 +440,8 @@ def extract_background(
         # img_bg = str(img_path).replace(in_folder, path_out)
         # Using pathlib Path method .with_parent():
         # TODO: Use the proper filename, when it's in the dataframe
-        bg_path = img_path.with_parent(path_out)
+        # TODO: Fix folder structure to Hives and RPis once in dataframe
+        bg_path = path_out / img_path.name
         cv.imwrite(str(bg_path), img_bgmodel)
 
         # Break if max runs is defined and reached
