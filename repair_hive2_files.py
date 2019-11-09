@@ -67,7 +67,10 @@ def main(path_in=PATH_IN, path_out=PATH_OUT,
 
         # Move the file
         file.replace(filepath)
-        print(f"Moved file to '{file}'")
+        if filepath.is_file():
+            print(f"Moved file to '{filepath}'")
+        else:
+            print(f"ERROR moving '{file.name}' to '{filepath}'")
 
 
 if __name__ == "__main__":
