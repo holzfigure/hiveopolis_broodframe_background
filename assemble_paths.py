@@ -430,7 +430,7 @@ def main(
     # Process all subfolders containing broodnest photos
     # Reverse order to get the newest folders first
     folders = sorted(path_raw.glob(folder_pattern),
-                     key=os.path.getmtime, reverse=True)
+                     key=os.path.getmtime)  # , reverse=True)
     n_folders = len(folders)
     logging.info(f"Number of folders: {n_folders}")
 
