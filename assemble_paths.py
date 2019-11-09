@@ -316,7 +316,15 @@ def export_csv(df, dt_targ,
     trunc = file.name.split("broodn")[0]
     rpi = int(trunc.split("pi")[-1][0])
     hive = int(trunc.split("hive")[-1][0])
-    logging.debug(f"filename: {file.name}, rpi={rpi}, hive={hive}")
+    logging.debug(f"Filename: {file.name}, rpi={rpi}, hive={hive}")
+
+    # NOTE: Temporary hack to fix wrongly named hive2 files
+    # TODO: REMOVE, especially when "hive2" really exists!
+    if hive == 2:
+        hive = 1
+        rpi = 2
+        logging.warning(f"Changed Hive and RPi numbers: "
+                        f"Filename: {file.name}, rpi={rpi}, hive={hive}")
 
     targ_str = dt_targ.strftime(time_targ_fmt)
     time_str = time.strftime(time_fmt)
@@ -335,7 +343,7 @@ def export_csv(df, dt_targ,
     df.to_csv(
             ffn,
             # index_label="time",
-            # date_format=time_fmt,
+            date_format=time_fmt,
     )
     logging.info(f"Exported CSV to {ffn}")
 
