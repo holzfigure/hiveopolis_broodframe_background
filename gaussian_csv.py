@@ -463,7 +463,7 @@ def main(file_pattern=INFILE_PATTERN, args=ARGS):
     path_in, path_out = initialize_io()
 
     # Get Paths to all CSV-files
-    csv_list = sorted(path_in.glob(file_pattern))
+    csv_list = sorted(path_in.rglob(file_pattern))
     logging.info(f"Found {len(csv_list)} files "
                  f"matching pattern '{file_pattern}' "
                  f"in '{path_in}'.")
