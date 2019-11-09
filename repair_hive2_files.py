@@ -42,7 +42,7 @@ def main(path_in=PATH_IN, path_out=PATH_OUT,
     # Iterate over all images
 
     # ./hive2/rpi1/bgx_hive2_rpi1_targ190907-14_190907-140003-utc.csv
-    filelist = path_in.rglob("bgx_hive2_rpi1_targ*.csv.jpg")
+    filelist = sorted(path_in.rglob("bgx_hive2_rpi1_targ*.csv.jpg"))
     print(f"Found {len(filelist)} files.")
     for file in filelist:
 
