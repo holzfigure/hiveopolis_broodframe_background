@@ -6,6 +6,12 @@ assemble a pandas dataframe containing the UTC times and filepaths of
 the photos needed to run the background extraction algorithm.
 
 Each such dataframe is exported as a CSV file.
+
+TODO: put the proper filenames in the table,
+TODO: put columns for hive and rpi
+TODO: put formatted timestring in the table
+TODO: only put the relative path to the file (including the parent folder)
+
 """
 
 # Basic libraries
@@ -250,7 +256,14 @@ def pack_dataframe(dt_targ, times, paths,
                    history=HISTORY,
                    tol_time=TOLERANCE_TIME_SEC,
                    ):
-    """Export a pandas dataframe to extract background."""
+    """Export a pandas dataframe to extract background.
+
+    TODO: put the proper filenames in the table,
+    TODO: put columns for hive and rpi
+    TODO: put formatted timestring in the table
+    TODO: only put the relative path to the file (including
+          the parent folder)
+    """
     dt = times[-1]
     p = paths[-1]
     logging.info(
@@ -358,7 +371,14 @@ def get_target_dfs(
         tol_time=TOLERANCE_TIME_SEC,
         history=HISTORY,
 ):
-    """Extract the relevant chunks of files with their timestamps."""
+    """Extract the relevant chunks of files with their timestamps.
+
+    TODO: put the proper filenames in the table,
+    TODO: put columns for hive and rpi
+    TODO: put formatted timestring in the table
+    TODO: only put the relative path to the file (including
+          the parent folder)
+    """
     target_dfs = []
     # Pick target hour and set up containers
     x = 0

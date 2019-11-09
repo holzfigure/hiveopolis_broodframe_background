@@ -34,7 +34,7 @@ import pandas as pd
 import numpy as np
 # open cv, we have to load V3 for full list of algorithms
 # https://docs.opencv.org/3.4
-# import cv2 as cv
+import cv2 as cv
 
 # Own libraries
 import iohelp as ioh
@@ -62,6 +62,8 @@ PATH_OUT = Path(
 INFILE_PATTERN = "bgx_hive*_rpi*_targ*.csv"
 # INFOLDER_PATTERN = "Photos_of_Pi*/"
 OUTIMG_PREFIX = "bgx"
+BG_OUTFOLDER = "imgs"
+
 
 # TIME-RELATED SETTINGS
 # LOCAL_TZ = pytz.timezone("Etc/UTC")
@@ -319,6 +321,8 @@ def my_path_parser(p_str):
 
 def extract_background(
         filepaths,  # pandas series of pathlib Paths to the photos
+        path_out,
+        bg_folder=BG_OUTFOLDER,
         print_modulus=PRINT_MODULUS,
         learning_rate=ARGS.learningrate,
         max_runs=ARGS.maxruns,
@@ -327,23 +331,29 @@ def extract_background(
         var_threshold=ARGS.varthreshold,
         sharpen=ARGS.sharpen,
         adjust_gamma=ARGS.adjustgamma,
+        args=ARGS,
 ):
     """Run Gaussian stuff using code from Hannes Oberreither."""
+    n_files = len(filepaths)
+    in_folder = filepaths[0].parent
+    path_out = path_out / bg_folder
+    logging.info(f"Received {n_files} in '{in_folder}', "
+                 f"exporting to '{path_out}'")
 
-    # logging.info(
-    #     "======= SETTINGS =======\n"
-    #     f"Path raw:      {path_raw}\n"
-    #     f"Path output:   {path_out}\n"
-    #     f"Print modulus: {print_modulus}\n"
-    #     f"Max runs:      {max_runs}\n"
-    #     f"Learning rate: {learning_rate}\n"
-    #     f"History:       {history}\n"
-    #     f"Shadow:        {shadow}\n"
-    #     f"var_threshold: {var_threshold}\n"
-    #     f"Sharpen:       {sharpen}\n"
-    #     f"Adjust Gamma:  {adjust_gamma}\n"
-    # )
-    #
+    logging.info(
+        "\n======= MOG SETTINGS =======\n"
+        # f"Path raw:      {in_folder}\n"
+        # f"Path output:   {path_out}\n"
+        f"Print modulus: {print_modulus}\n"
+        f"Max runs:      {max_runs}\n"
+        f"Learning rate: {learning_rate}\n"
+        f"History:       {history}\n"
+        f"Shadow:        {shadow}\n"
+        f"var_threshold: {var_threshold}\n"
+        f"Sharpen:       {sharpen}\n"
+        f"Adjust Gamma:  {adjust_gamma}\n"
+    )
+
     # # Load CV BackgroundSubtractorMOG2 with settings
     # # https://docs.opencv.org/3.4/d1/dc5/tutorial_background_subtraction.html
     # # https://docs.opencv.org/master/d6/d17/group__cudabgsegm.html
@@ -352,11 +362,10 @@ def extract_background(
     # # 'setDetectShadows', 'setHistory', 'setNMixtures',
     # # 'setShadowThreshold', 'setShadowValue', 'setVarInit', 'setVarMax',
     # # 'setVarMin', 'setVarThreshold', 'setVarThresholdGen'
-    # mog = cv.createBackgroundSubtractorMOG2()
-    # mog.setDetectShadows(shadow)
-    # mog.setHistory(history)
-    # mog.setVarThreshold(var_threshold)
-    #
+    mog = cv.createBackgroundSubtractorMOG2()
+    mog.setDetectShadows(shadow)
+    mog.setHistory(history)
+    mog.setVarThreshold(var_threshold)
     #
     # # TODO: Find pathlib way of doing this: key=os.path.getmtime
     # #       p.stat().st_mtime
@@ -368,89 +377,90 @@ def extract_background(
     # # Try this:
     # # array = sorted(path_raw.rglob("*.jpg"),
     # #                key=os.path.getmtime, reverse=True)
-    #
-    #
-    #
-    # print("#############################")
-    # logging.info("Starting with total file number: " + str(len(array)))
-    # print("#############################")
-    #
-    # # Build a lookup table mapping the pixel values [0, 255] to
-    # # their adjusted gamma values
-    # # Somehow I found the value of `gamma=1.2` to be the best in my case
-    # inv_gamma = 1.0 / 1.2
-    # ltable = np.array([
-    #     ((i / 255.0) ** inv_gamma) * 255
-    #     for i in np.arange(0, 256)]).astype("uint8")
-    #
-    # # loop x times as files in our folder
-    # for x in range(len(array)):
-    #
-    #     # We can loop now through our array of images
-    #     img_path = array[x]
-    #
-    #     # Read file with OpenCV
-    #     img = cv.imread(img_path)
-    #
-    #     # Preprocessing ######
-    #     # Change image to grayscale
-    #     img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    #     # Equalize grayscale image
-    #     # img = cv.equalizeHist(img)
-    #     # Add gaussian to remove noise
-    #     # img = cv.GaussianBlur(img, (1, 1), 0)
-    #     # img = cv.medianBlur(img, 1)
-    #     # img = cv.GaussianBlur(img, (7, 7), 1.5)
-    #     # END Preprocessing ######
-    #
-    #     # Apply algorithm to generate background model
-    #     img_output = mog.apply(img, learning_rate)
-    #     logging.info(f"img_out: {img_output}")
-    #     # Threshold for foreground mask, we don't use the
-    #     # foreground mask so we dont need it?
-    #     # img_output = cv.threshold(img_output, 10, 255, cv.THRESH_BINARY);
-    #
-    #     # Get background image
-    #     img_bgmodel = mog.getBackgroundImage()
-    #
-    #     # Postprocessing ######
-    #
-    #     # Sharpen the image
-    #     if sharpen:
-    #         img_bgmodel = unsharp_mask(img_bgmodel)
-    #
-    #     # Adjust gamma if there is light change
-    #     if adjust_gamma:
-    #         img = adjust_gamma(img, ltable)
-    #
-    #     # Change image to grayscale
-    #     # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    #     # Equalize grayscale image
-    #     # img = cv.equalizeHist(img)
-    #     # Add gaussian to remove noise
-    #     # img = cv.GaussianBlur(img, (1, 1), 0)
-    #     # img = cv.medianBlur(img, 1)
-    #     # img = cv.GaussianBlur(img, (7, 7), 1.5)
-    #
-    #     # img_bgmodel = cv.equalizeHist(img_bgmodel)
-    #     # END Preprocessing ######
-    #
-    #     # Write finished backgroundModels
-    #     img_bg = img_path.replace(path_raw, path_out)
-    #     cv.imwrite(img_bg, img_bgmodel)
-    #
-    #     # Break if max runs is defined and reached
-    #     if max_runs > 0:
-    #         if x == max_runs:
-    #             break
-    #
-    #     if (x % logging.info_modulus) == 0:
-    #         logging.info(f"Current image: {img_path}\n"
-    #                      f"Runs left: {len(array)-x}")
-    #
-    # # END
 
-    return bg_path
+    # Build a lookup table mapping the pixel values [0, 255] to
+    # their adjusted gamma values
+    # Somehow I found the value of `gamma=1.2` to be the best in my case
+    inv_gamma = 1.0 / 1.2
+    ltable = np.array([
+        ((i / 255.0) ** inv_gamma) * 255
+        for i in np.arange(0, 256)]).astype("uint8")
+
+    # Iterate over all files
+    for x in range(n_files):
+
+        # We can loop now through our array of images
+        img_path = filepaths[x]
+
+        # Read file with OpenCV
+        img = cv.imread(img_path)
+
+        # Preprocessing ######
+        # Change image to grayscale
+        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        # Equalize grayscale image
+        # img = cv.equalizeHist(img)
+        # Add gaussian to remove noise
+        # img = cv.GaussianBlur(img, (1, 1), 0)
+        # img = cv.medianBlur(img, 1)
+        # img = cv.GaussianBlur(img, (7, 7), 1.5)
+        # END Preprocessing ######
+
+        # Apply algorithm to generate background model
+        img_output = mog.apply(img, learning_rate)
+        logging.debug(f"img_out: {img_output}")
+        # Threshold for foreground mask, we don't use the
+        # foreground mask so we dont need it?
+        # img_output = cv.threshold(img_output, 10, 255, cv.THRESH_BINARY);
+
+        # Get background image
+        img_bgmodel = mog.getBackgroundImage()
+
+        # Postprocessing ######
+
+        # Sharpen the image
+        if sharpen:
+            img_bgmodel = unsharp_mask(img_bgmodel)
+
+        # Adjust gamma if there is light change
+        # NOTE: This only works on the raw image and has no effect!!
+        if adjust_gamma:
+
+
+            img = adjust_gamma(img, ltable)
+
+        # Change image to grayscale
+        # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        # Equalize grayscale image
+        # img = cv.equalizeHist(img)
+        # Add gaussian to remove noise
+        # img = cv.GaussianBlur(img, (1, 1), 0)
+        # img = cv.medianBlur(img, 1)
+        # img = cv.GaussianBlur(img, (7, 7), 1.5)
+
+        # img_bgmodel = cv.equalizeHist(img_bgmodel)
+        # END Preprocessing ######
+
+        # Write finished backgroundModels
+        # # Using string-method .replace:
+        # img_bg = str(img_path).replace(in_folder, path_out)
+        # Using pathlib Path method .with_parent():
+        # TODO: Use the proper filename, when it's in the dataframe
+        bg_path = img_path.with_parent(path_out)
+        cv.imwrite(str(bg_path), img_bgmodel)
+
+        # Break if max runs is defined and reached
+        if max_runs > 0:
+            if x == max_runs:
+                break
+
+        if x % print_modulus == 0:
+            logging.info(f"Current image: {img_path}\n"
+                         f"Runs left: {n_files - x}")
+
+    # END
+
+    return bg_path.parent
 
 
 def main(file_pattern=INFILE_PATTERN, args=ARGS):
@@ -476,7 +486,7 @@ def main(file_pattern=INFILE_PATTERN, args=ARGS):
 
         # Now you don't really need all the fancy CSV-parsing magic..
         # Call the Gaussian Action xaggly hewe Oida!
-        bg_path = extract_background(df)
+        bg_path = extract_background(df.path, path_out)
 
     logging.info("Done.")
 
