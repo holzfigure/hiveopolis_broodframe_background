@@ -32,18 +32,20 @@ PATH_OUT = Path(
 # TIME_FMT = "%y%m%d-%H%M%S-utc"
 # DAY_FMT = "day-%y%m%d"
 # WRONG_FMT = "%d_%m_%H_%M_%S.jpg"
+
+FILE_PATTERN = "bgx_hive2_rpi1_targ*.csv"
 PREFIX = "bgx_hive1_rpi2_targ"
 EXIST_TAG = "_exists"
 
 
 def main(path_in=PATH_IN, path_out=PATH_OUT,
-         prefix=PREFIX, exists=EXIST_TAG):
-    """Iterate over all broodnest photos and rename them."""
+         prefix=PREFIX, exists=EXIST_TAG, pattern=FILE_PATTERN):
+    """Iterate over all broodnest photos and rename and sort them."""
     # Iterate over all images
 
     # ./hive2/rpi1/bgx_hive2_rpi1_targ190907-14_190907-140003-utc.csv
-    filelist = sorted(path_in.rglob("bgx_hive2_rpi1_targ*.csv.jpg"))
-    print(f"Found {len(filelist)} files.")
+    filelist = sorted(path_in.rglob(pattern))
+    print(f"Found {len(filelist)} files in {path_in}.")
     for file in filelist:
 
         # Parse the correct file ending
