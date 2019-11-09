@@ -343,7 +343,7 @@ def export_csv(df, dt_targ,
     df.to_csv(
             ffn,
             # index_label="time",
-            date_format=time_fmt,
+            # date_format=time_fmt,
     )
     logging.info(f"Exported CSV to {ffn}")
 

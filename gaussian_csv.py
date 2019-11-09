@@ -51,29 +51,22 @@ DEPENDENCIES = [
 # PATH_OUT = Path.cwd() / 'out'
 PATH_IN = Path(
     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
-    "broodnest_bgs/csv")
+    "broodnest_bgs/assemble_paths_191109-utc/csv"
+)
 PATH_OUT = Path(
     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
     "broodnest_bgs"
 )
-# Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-INFILE_PATTERN = "pi*_hive*broodn_*.jpg"
-# Foldername e.g.:  Photos_of_Pi1_1_9_2019
-# Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
-INFOLDER_PATTERN = "Photos_of_Pi*/"
-OUTCSV_PREFIX = "bgx"
+# Filename e.g.:  bgx_hive1_rpi2_targ190907-14_190907-140003-utc.csv
+INFILE_PATTERN = "bgx_hive*_rpi*_targ*.csv"
+# INFOLDER_PATTERN = "Photos_of_Pi*/"
+OUTIMG_PREFIX = "bgx"
 
-# TIME-RELATED PARAMETERS
-EXPORT_HOURS_UTC = [2, 8, 14, 20]  # must be sorted!
-TOLERANCE_TIME_SEC = 60 * 60  # 1 hour
-YEAR = 2019
 # LOCAL_TZ = pytz.timezone("Etc/UTC")
 LOCAL_TZ = pytz.timezone("Europe/Vienna")
 TIME_FMT = "%y%m%d-%H%M%S-utc"
 TIME_TARGET_FMT = "%y%m%d-%H"
-DAY_FMT = "day-%y%m%d"
-TIME_INFILE_FMT = "%d_%m_%H_%M_%S.jpg"
-TIME_INFOLDER_FMT = "%d_%m_%Y"
+# DAY_FMT = "day-%y%m%d"
 
 # https://docs.opencv.org/master/d7/df6/
 # classcv_1_1BackgroundSubtractor.html#aa735e76f7069b3fa9c3f32395f9ccd21
@@ -98,10 +91,6 @@ parser = argparse.ArgumentParser(
     description=("Extract the broodnest from colony photos."))
 parser.add_argument("-d", "--debug", action="store_true",
                     help="debug mode")
-# parser.add_argument("-l", "--live", action="store_true",
-#                     help="keep looking for new files")
-# parser.add_argument("-l", "--latexify", action="store_true",
-#                     help="format for IEEE paper")
 parser.add_argument("-i", "--interactive", action="store_true",
                     help="popup dialog to select files or folders")
 # parser.add_argument("-p", "--plot", action="store_true",
@@ -126,7 +115,7 @@ ARGS = parser.parse_args()
 # del(parser)
 
 
-def initialize_io(dir_in=PATH_RAW, dir_out=PATH_OUT,
+def initialize_io(dir_in=PATH_IN, dir_out=PATH_OUT,
                   deps=DEPENDENCIES,
                   postfix=POSTFIX, args=ARGS):
     """Set up IO-directories and files and logging."""
@@ -221,281 +210,53 @@ def initialize_io(dir_in=PATH_RAW, dir_out=PATH_OUT,
     return dir_in, dir_out
 
 
-# def adjust_gamma(image, ltable):
-#     """Apply gamma correction using the lookup table."""
-#     return cv.LUT(image, ltable)
-#
-#
-# def unsharp_mask(image, kernel_size=(5, 5), sigma=1.0,
-#                  amount=1.0, threshold=0):
-#     """Return a sharpened version of the image, using an unsharp mask.
-#
-#     https://en.wikipedia.org/wiki/Unsharp_masking
-#     https://homepages.inf.ed.ac.uk/rbf/HIPR2/unsharp.htm"""
-#     blurred = cv.GaussianBlur(image, kernel_size, sigma)
-#     sharpened = float(amount + 1) * image - float(amount) * blurred
-#     sharpened = np.maximum(sharpened, np.zeros(sharpened.shape))
-#     sharpened = np.minimum(sharpened, 255 * np.ones(sharpened.shape))
-#     sharpened = sharpened.round().astype(np.uint8)
-#     if threshold > 0:
-#         low_contrast_mask = np.absolute(image - blurred) < threshold
-#         # OpenCV4 function copyTo
-#         np.copyto(sharpened, image, where=low_contrast_mask)
-#     return sharpened
+def adjust_gamma(image, ltable):
+    """Apply gamma correction using the lookup table."""
+    return cv.LUT(image, ltable)
 
 
-def folder_datetime(foldername, time_infolder_fmt=TIME_INFOLDER_FMT):
-    """Parse UTC datetime from foldername.
+def unsharp_mask(image, kernel_size=(5, 5), sigma=1.0,
+                 amount=1.0, threshold=0):
+    """Return a sharpened version of the image, using an unsharp mask.
 
-    Foldername e.g.:  Photos_of_Pi1_1_9_2019/
-                      Photos_of_Pi2_heating_1_11_2019/
+    https://en.wikipedia.org/wiki/Unsharp_masking
+    https://homepages.inf.ed.ac.uk/rbf/HIPR2/unsharp.htm"""
+    blurred = cv.GaussianBlur(image, kernel_size, sigma)
+    sharpened = float(amount + 1) * image - float(amount) * blurred
+    sharpened = np.maximum(sharpened, np.zeros(sharpened.shape))
+    sharpened = np.minimum(sharpened, 255 * np.ones(sharpened.shape))
+    sharpened = sharpened.round().astype(np.uint8)
+    if threshold > 0:
+        low_contrast_mask = np.absolute(image - blurred) < threshold
+        # OpenCV4 function copyTo
+        np.copyto(sharpened, image, where=low_contrast_mask)
+    return sharpened
+
+
+def convert2utc(dt_naive, local_tz=LOCAL_TZ):
+    """Localize naive time and convert it to an aware datetime in UTC.
+
+    LOCAL_TZ = pytz.timezone("Etc/UTC")
+    LOCAL_TZ = pytz.timezone("Europe/Vienna")
     """
-    # t_str = folder.name.split("Photos_of_Pi")[-1][2:]  # heating!!
-    t_str = "_".join(foldername.split("_")[-3:])
-    day_naive = datetime.strptime(t_str, time_infolder_fmt)
-    # Localize as UTC
-    # day_local = local_tz.localize(day_naive)
-    # dt_utc = day_local.astimezone(pytz.utc)
-    day = pytz.utc.localize(day_naive)
-
-    return day
-
-
-def file_datetime(
-        filename,  # type <str>  # path.name
-        year=YEAR,
-        local_tz=LOCAL_TZ,
-        # filetag=INFILE_TAG,
-        time_infile_fmt=TIME_INFILE_FMT,
-):
-    """Parse UTC datetime object from filename."""
-    # Extract the timestring from the filename
-    # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-    t_str = filename.split("broodn_")[-1]
-    # TODO: Make this more robust for full pathlib Path objects?
-
-    # Parse it into a datetime object
-    dt_naive = datetime.strptime(
-            t_str, time_infile_fmt).replace(year=year)
-
-    # Localize and convert to UTC
+    # Localize (i.e., make aware)
     dt_local = local_tz.localize(dt_naive)
+    # Convert to UTC
     dt_utc = dt_local.astimezone(pytz.utc)
 
     return dt_utc
 
 
-def assemble_timestamps(filelist, year=YEAR):
-    """Return a list of timestamps of the same length as the filelist."""
+def my_date_parser(t_str, time_fmt=TIME_FMT):
+    """Parse a timestring of my time_fmt.
 
-    times = []
-    # failures = []
-    filelist_out = []
-    for file in filelist:
-        try:
-            # parse timestamp
-
-            times.append(file_datetime(file.name, year=year))
-            filelist_out.append(file)
-        except Exception as err:
-            logging.error("Couldn't parse time of file " +
-                          f"'{file}': {err}")
-            # failures.append(file)
-
-    # if len(failures) > 0:
-    #     logging.warning("Failed files:")
-    #     for fail in failures:
-    #         logging.warning(f"{fail}")
-
-    # Convert to numpy arrays
-    # np.array(timestamps).astype("datetime64")
-    times = np.array(times)
-    filelist_out = np.array(filelist_out)
-
-    # Sort by time
-    time_sort = np.argsort(times)
-    times = times[time_sort]
-    filelist_out = filelist_out[time_sort]
-
-    logging.info(f"Returning {len(times)} files and times")
-    return times, filelist_out
-
-
-def pack_dataframe(dt_targ, times, paths,
-                   history=HISTORY,
-                   tol_time=TOLERANCE_TIME_SEC,
-                   ):
-    """Export a pandas dataframe to extract background."""
-    dt = times[-1]
-    p = paths[-1]
-    logging.info(
-        f"Received {len(times)} timestamped files. "
-        f"Target: {dt_targ}, current time: {dt}, "
-        f"current file: {p.parent.name}/{p.name}"
-    )
-
-    # Check whether found time is close enough to target
-    delta_t = (dt - dt_targ).total_seconds()
-    if abs(delta_t) < tol_time:
-        # Truncate lists to history-size
-        if (len(times) >= history) and (len(paths) >= history):
-
-            # Keep the last "history" elements
-            times = times[-history:]
-            paths = paths[-history:]
-
-            # Assemble the data in a pandas dataframe
-            # pd.DataFrame({'time': times, 'path': paths})
-            # pd.DataFrame(np.array([times, paths]).T,
-            #              columns=["time", "path"])
-            df = pd.DataFrame(
-                index=times,
-                data=paths,
-                columns=["path"],
-            )
-            df.index.name = "time"
-            df.sort_index(inplace=True)
-            logging.info(
-                f"Successfully built dataframe of shape {df.shape}"
-            )
-        else:
-            logging.error(
-                f"Found only {len(times)} of {history} "
-                f"required photos. Skipping target '{dt_targ}'!"
-            )
-            df = None
-    else:
-        logging.error(
-            f"Found time {dt} is too far from target '{dt_targ}': "
-            f"abs({delta_t}) > {tol_time} seconds. Skipping target!"
-        )
-        df = None
-
-    return df
-
-
-def export_csv(df, dt_targ,
-               path_out=PATH_OUT,
-               time_fmt=TIME_FMT,
-               time_targ_fmt=TIME_TARGET_FMT,
-               prefix=OUTCSV_PREFIX,
-               ):
-    """Write the timestamped filepath array to CSV."""
-    # TODO: Build paths and nice names
-    file = df["path"][-1]
-    time = df.index[-1]
-    # folder = file.parent.name
-    # Foldername e.g.:  Photos_of_Pi1_1_9_2019
-    # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
-    # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-    trunc = file.name.split("broodn")[0]
-    rpi = int(trunc.split("pi")[-1][0])
-    hive = int(trunc.split("hive")[-1][0])
-    logging.debug(f"filename: {file.name}, rpi={rpi}, hive={hive}")
-
-    targ_str = dt_targ.strftime(time_targ_fmt)
-    time_str = time.strftime(time_fmt)
-
-    # Set up output folder
-    dir_out = path_out / f"csv/hive{hive}/rpi{rpi}"
-    if not dir_out.is_dir():
-        dir_out.mkdir(parents=True)
-        logging.info(f"Created folder '{dir_out}'")
-
-    # Build filename
-    fn = f"{prefix}_hive{hive}_rpi{rpi}_targ{targ_str}_{time_str}.csv"
-    ffn = ioh.safename((dir_out / fn), "file")
-
-    # Export CSV
-    df.to_csv(
-            ffn,
-            # index_label="time",
-            # date_format=time_fmt,
-    )
-    logging.info(f"Exported CSV to {ffn}")
-
-    return None
-
-
-def get_target_dfs(
-        filelist,
-        day,
-        path_out,
-        export_hours=EXPORT_HOURS_UTC,
-        tol_time=TOLERANCE_TIME_SEC,
-        history=HISTORY,
-):
-    """Extract the relevant chunks of files with their timestamps."""
-    target_dfs = []
-    # Pick target hour and set up containers
-    x = 0
-    dt_targ = day.replace(hour=export_hours[x])
-    times = []
-    paths = []
-    # failures = []
-    for file in filelist:
-        try:
-            # Parse timestamp into UTC datetime
-            dt = file_datetime(file.name, year=day.year)
-            times.append(dt)
-            paths.append(file)
-
-            # Check if one of the target hours has been reached
-            if dt >= dt_targ:
-                # Target hour reached
-
-                # Attempt building target_df
-                df = pack_dataframe(dt_targ, times, paths)
-                if df is not None:
-                    target_dfs.append(df)
-                    # Export CSV of the timestamped filepaths
-                    export_csv(df, dt_targ, path_out)
-                else:
-                    logging.error(f"Skipped target '{dt_targ}'")
-
-                # Reset containers and switch to next target hour
-                if x < len(export_hours) - 1:
-                    x += 1
-                    dt_targ = day.replace(hour=export_hours[x])
-                    times = []
-                    paths = []
-                else:
-                    # Leave loop when last target hour has been reached
-                    break
-
-        except Exception as err:
-            # TODO: Put the proper exception here!
-            logging.error("Couldn't parse time of file " +
-                          f"'{file}': {err}")
-            # failures.append(file)
-
-    # Check whether last target was reached, else try with last file
-
-    # # if len(failures) > 0:
-    # #     logging.warning("Failed files:")
-    # #     for fail in failures:
-    # #         logging.warning(f"{fail}")
-    #
-    # # Convert to numpy arrays
-    # # np.array(timestamps).astype("datetime64")
-    # times = np.array(times)
-    # paths = np.array(paths)
-    #
-    # # Sort by time
-    # time_sort = np.argsort(times)
-    # times = times[time_sort]
-    # paths = paths[time_sort]
-
-    logging.info(f"Returning {len(times)} files and times")
-    return times, paths
+    Required for pandas to quickly read my timestamps from a CSV.
+    """
+    return datetime.strptime(t_str, "%y%m%d-%H%M%S-utc")
 
 
 def main(
     file_pattern=INFILE_PATTERN,
-    folder_pattern=INFOLDER_PATTERN,
-    # time_infile_fmt=TIME_INFILE_FMT,
-    # time_infolder_fmt=TIME_INFOLDER_FMT,
-    # export_hours=EXPORT_HOURS_UTC,
     learning_rate=LEARNING_RATE,
     max_runs=MAX_RUNS,
     print_modulus=PRINT_MODULUS,
@@ -507,14 +268,21 @@ def main(
 ):
     """Extract the background from large amounts of broodnest photos."""
     # Initialize IO-directories and setup logging
-    path_raw, path_out = initialize_io()
+    path_in, path_out = initialize_io()
 
-    # Process all subfolders containing broodnest photos
-    # Reverse order to get the newest folders first
-    folders = sorted(path_raw.glob(folder_pattern),
-                     key=os.path.getmtime, reverse=True)
-    n_folders = len(folders)
-    logging.info(f"Number of folders: {n_folders}")
+    # Get Paths to all CSV-files
+    csv_list = sorted(path_in.glob(file_pattern))
+    logging.info(f"Found {len(csv_list)} files "
+                 f"matching pattern '{file_pattern}' "
+                 f"in '{path_in}'.")
+
+    for csv_path in csv_list:
+        # Works only with the default pandas time format:
+        df = pd.read_csv(csv_path, index_col="time", parse_dates=True)
+        # # Works for parsing my time_fmt:
+        # df = pd.read_csv(csv_path, index_col="time", parse_dates=True,
+        #                  date_parser=my_date_parser)
+
 
     i = 0
     for folder in folders:
