@@ -330,7 +330,12 @@ def extract_background(
     """Run Gaussian stuff using code from Hannes Oberreither."""
     n_files = len(filepaths)
     in_folder = filepaths[0].parent
-    path_out = path_out / bg_folder
+    path_out = path_out / bg_folder / in_folder.name
+    # TODO: Here fix the folder structure once hive and rpi...
+    # TODO: Here fix filename prefixes as well
+    if not path_out.is_dir():
+        path_out.mkdir(Parents=True)
+        logging.info(f"Created folder '{path_out}'")
     logging.info(f"Received {n_files} in '{in_folder}', "
                  f"exporting to '{path_out}'")
 
@@ -402,7 +407,7 @@ def extract_background(
 
         # Apply algorithm to generate background model
         img_output = mog.apply(img, learning_rate)
-        logging.debug(f"img_out: {img_output}")
+        # logging.debug(f"img_out: {img_output}")
         # Threshold for foreground mask, we don't use the
         # foreground mask so we dont need it?
         # img_output = cv.threshold(img_output, 10, 255, cv.THRESH_BINARY);
@@ -443,6 +448,7 @@ def extract_background(
         # TODO: Fix folder structure to Hives and RPis once in dataframe
         bg_path = path_out / img_path.name
         cv.imwrite(str(bg_path), img_bgmodel)
+        logging.info(f"Exported bg-image to '{bg_path}'")
 
         # Break if max runs is defined and reached
         if max_runs > 0:
@@ -453,6 +459,7 @@ def extract_background(
             logging.info(f"Current image: {img_path}\n"
                          f"Runs left: {n_files - x}")
 
+    # TODO: Export only the last image!
     # END
 
     return bg_path.parent
