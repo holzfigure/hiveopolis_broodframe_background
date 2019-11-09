@@ -19,8 +19,8 @@ described in:
   vol.26, no.5, pages 651-656, 2004.
 """
 
-# Basic libraries
-import os
+# Standard libraries
+# import os
 # import glob
 import logging
 import argparse
@@ -39,7 +39,7 @@ import numpy as np
 # Own libraries
 import iohelp as ioh
 
-# SETTINGS
+# IO-SETTINGS
 POSTFIX = None
 DEPENDENCIES = [
     Path("iohelp.py"),
@@ -50,11 +50,12 @@ DEPENDENCIES = [
 # PATH_RAW = Path.cwd() / 'img'
 # PATH_OUT = Path.cwd() / 'out'
 PATH_IN = Path(
-    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
-    "broodnest_bgs/assemble_paths_191109-utc/csv"
+    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
+    "broodnest_bgs/assemble_paths_191108-utc_default-timefmt/csv"
+    # "broodnest_bgs/assemble_paths_191109-utc_my-timefmt/csv"
 )
 PATH_OUT = Path(
-    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
+    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
     "broodnest_bgs"
 )
 # Filename e.g.:  bgx_hive1_rpi2_targ190907-14_190907-140003-utc.csv
@@ -62,22 +63,20 @@ INFILE_PATTERN = "bgx_hive*_rpi*_targ*.csv"
 # INFOLDER_PATTERN = "Photos_of_Pi*/"
 OUTIMG_PREFIX = "bgx"
 
+# TIME-RELATED SETTINGS
 # LOCAL_TZ = pytz.timezone("Etc/UTC")
 LOCAL_TZ = pytz.timezone("Europe/Vienna")
 TIME_FMT = "%y%m%d-%H%M%S-utc"
 TIME_TARGET_FMT = "%y%m%d-%H"
 # DAY_FMT = "day-%y%m%d"
 
+# BACKGROUND-EXTRACTION SETTINGS
 # https://docs.opencv.org/master/d7/df6/
 # classcv_1_1BackgroundSubtractor.html#aa735e76f7069b3fa9c3f32395f9ccd21
 LEARNING_RATE = -1
-# Max runs if we want to limit generation, False or 0 for no max runs
-MAX_RUNS = 0
-# Print modulus, only used for output of text
-PRINT_MODULUS = 10
+
 # MOG Settings
 HISTORY = 200           # standard 200
-SHADOW = False          # just returns detected shadows, we dont need it
 VAR_THRESHOLD = 16       # standard 16
 # Use sharpen algorithm, takes a lot of time and
 # needs opencv4 (pip3 install opencv-python)
@@ -85,6 +84,12 @@ SHARPEN = True
 # Adjust Gamma
 ADJUST_GAMMA = True
 # END SETTINGS
+SHADOW = False          # just returns detected shadows, we dont need it
+# Max runs if we want to limit generation, False or 0 for no max runs
+MAX_RUNS = 0
+
+# Print modulus, only used for output of text
+PRINT_MODULUS = 10
 
 # argument parsing
 parser = argparse.ArgumentParser(
@@ -95,8 +100,46 @@ parser.add_argument("-i", "--interactive", action="store_true",
                     help="popup dialog to select files or folders")
 # parser.add_argument("-p", "--plot", action="store_true",
 #                     help="make various plots of the data")
-# parser.add_argument("-a", "--arrest", action="store_true",
-#                     help="show plots and wait until closed")
+parser.add_argument("-r", "--learningrate", type=int,
+                    default=LEARNING_RATE,
+                    help=(
+                        "set learning rate for "
+                        "background extraction algorithm, "
+                        "negative numbers auto-infer "
+                        "(default: %(default)s)"
+                    ))
+parser.add_argument("-n", "--history", type=int,
+                    default=HISTORY,
+                    help=(
+                        "number of photos used for background extraction "
+                        "(default: %(default)s)"
+                    ))
+parser.add_argument("-v", "--varthreshold", type=int,
+                    default=VAR_THRESHOLD,
+                    help=(
+                        "??? 'standard 16' ??? "
+                        "(default: %(default)s)"
+                    ))
+parser.add_argument("-s", "--sharpen", action="store_true",
+                    help="use 'sharpen' algorithm")
+parser.add_argument("-g", "--adjustgamma", action="store_true",
+                    help="adjust gamma...")
+parser.add_argument("--shadow", action="store_false",
+                    help="use 'shadow-detection' algorithm")
+parser.add_argument("-m", "--maxruns", type=int,
+                    default=MAX_RUNS,
+                    help=(
+                        "??? "
+                        "'Max runs if we want to limit generation, "
+                        "False or 0 for no max runs' ??? "
+                        "(default: %(default)s)"
+                    ))
+parser.add_argument("-v", "--var-threshold", type=int,
+                    default=VAR_THRESHOLD,
+                    help=(
+                        "??? 'standard 16' ??? "
+                        "(default: %(default)s)"
+                    ))
 # parser.add_argument("-c", "--copy_imgs", type=int,
 #                     default=N_IMAGE_COPIES,
 #                     help=("save N copies of each plot " +
@@ -248,98 +291,44 @@ def convert2utc(dt_naive, local_tz=LOCAL_TZ):
 
 
 def my_date_parser(t_str, time_fmt=TIME_FMT):
-    """Parse a timestring of my time_fmt.
+    """Parse a timestring into a datetime.datetime object.
 
-    Required for pandas to quickly read my timestamps from a CSV.
+    Required for pandas.read_csv() to parse non-standard timestrings.
+
+    Examples (CSV contains a header and a column labelled "time"):
+
+    df = pd.read_csv(csv_path, index_col="time", parse_dates=True,
+                     date_parser=my_date_parser)
+
+    df = pd.read_csv(csv_path, converters={"time": my_date_parser})
     """
-    return datetime.strptime(t_str, "%y%m%d-%H%M%S-utc")
+    return datetime.strptime(t_str, time_fmt)
 
 
-def main(
-    file_pattern=INFILE_PATTERN,
-    learning_rate=LEARNING_RATE,
-    max_runs=MAX_RUNS,
-    print_modulus=PRINT_MODULUS,
-    history=HISTORY,
-    shadow=SHADOW,
-    var_threshold=VAR_THRESHOLD,
-    sharpen=SHARPEN,
-    adjust_gamma=ADJUST_GAMMA,
+def my_path_parser(p_str):
+    """Parse a pathstring into a pathlib.Path object.
+
+    Required for pandas.read_csv() to parse pathstrings into Paths.
+
+    Example (CSV contains header and column labelled "path"):
+
+    df = pd.read_csv(csv_path, converters={"path": my_date_parser})
+    """
+    return Path(p_str)
+
+
+def extract_background(
+        filepaths,  # pandas series of pathlib Paths to the photos
+        print_modulus=PRINT_MODULUS,
+        learning_rate=ARGS.learningrate,
+        max_runs=ARGS.maxruns,
+        history=ARGS.history,
+        shadow=ARGS.shadow,
+        var_threshold=ARGS.varthreshold,
+        sharpen=ARGS.sharpen,
+        adjust_gamma=ARGS.adjustgamma,
 ):
-    """Extract the background from large amounts of broodnest photos."""
-    # Initialize IO-directories and setup logging
-    path_in, path_out = initialize_io()
-
-    # Get Paths to all CSV-files
-    csv_list = sorted(path_in.glob(file_pattern))
-    logging.info(f"Found {len(csv_list)} files "
-                 f"matching pattern '{file_pattern}' "
-                 f"in '{path_in}'.")
-
-    for csv_path in csv_list:
-        # Works only with the default pandas time format:
-        df = pd.read_csv(csv_path, index_col="time", parse_dates=True)
-        # # Works for parsing my time_fmt:
-        # df = pd.read_csv(csv_path, index_col="time", parse_dates=True,
-        #                  date_parser=my_date_parser)
-
-
-    i = 0
-    for folder in folders:
-        i += 1
-        logging.info(f"Processing folder {i}/{n_folders}: '{folder.name}'")
-
-        # Get the day as UTC datetime object
-        # mtime = folder.stat().st_mtime
-        day = folder_datetime(folder.name)
-
-        # Assemble preliminary list of files matching the pattern
-        # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-        # array = sorted(glob.iglob(path_raw + '/*.jpg'),
-        #                key=os.path.getmtime, reverse=True)
-        filelist = sorted(folder.glob(file_pattern),
-                          key=os.path.getmtime)
-        logging.info(f"Found {len(filelist)} files.")
-
-        target_dfs = get_target_dfs(filelist, day, path_out)
-
-        # if len(filelist) > history:
-        #     # Get the timestamps and a corresponding filelist
-        #     timestamps, filelist = assemble_timestamps(
-        #             filelist, year=day.year)
-        #
-        #     for hour in export_hours:
-        #
-        #         # Get a target datetime object (i.e. the desired hour)
-        #         dt_target = day.replace(hour=hour)
-        #
-        #         # Compute time-difference to all timestamps
-        #         d_seconds = []
-        #         # TODO: Do this with sth like "apply_func" or so instead?
-        #         for ts in timestamps:
-        #             d_seconds.append((ts - dt_target).total_seconds())
-        #             # d_seconds.append(abs((ts - dt_target).total_seconds()))
-        #         # Take absolute time-diffs
-        #         d_seconds = np.absolute(d_seconds)
-        #
-        #         # Find minimum of absolute deltas
-        #         min_idx = np.argmin(d_seconds)
-        #         abs_delta = d_seconds[min_idx]
-        #
-        #         if (abs_delta < hour_tolerance) and (min_idx > history):
-        #             closest_time = timestamps[min_idx]
-        #             closest_file = filelist[min_idx]
-        #         # Make sure it's meaningful (closer than THRESH..)
-        #
-        #         # Make sure it has a long enough HISTORY..
-        #
-        # else:  # Skip folder
-        #     logging.info(
-        #         f"WARNING: Folder '{folder}' doesn't contain enough data: "
-        #         f"{len(filelist)} files < {history} minimally required."
-        #     )
-
-
+    """Run Gaussian stuff using code from Hannes Oberreither."""
 
     # logging.info(
     #     "======= SETTINGS =======\n"
@@ -456,9 +445,40 @@ def main(
     #             break
     #
     #     if (x % logging.info_modulus) == 0:
-    #         logging.info(f"Current image: {img_path}\nRuns left: {len(array)-x}")
+    #         logging.info(f"Current image: {img_path}\n"
+    #                      f"Runs left: {len(array)-x}")
     #
     # # END
+
+    return bg_path
+
+
+def main(file_pattern=INFILE_PATTERN, args=ARGS):
+    """Extract the background from large amounts of broodnest photos."""
+    # Initialize IO-directories and setup logging
+    path_in, path_out = initialize_io()
+
+    # Get Paths to all CSV-files
+    csv_list = sorted(path_in.glob(file_pattern))
+    logging.info(f"Found {len(csv_list)} files "
+                 f"matching pattern '{file_pattern}' "
+                 f"in '{path_in}'.")
+
+    for csv_path in csv_list:
+        logging.info(f"Reading '{csv_path.name}'")
+        # # Works for parsing my time_fmt:
+        # df = pd.read_csv(csv_path, index_col="time", parse_dates=True,
+        #                  date_parser=my_date_parser)
+        # Works only with the default pandas time format:
+        df = pd.read_csv(csv_path, index_col="time", parse_dates=True,
+                         converters={"path": my_path_parser})
+        logging.debug(f"Read in dataframe sized {df.shape}.")
+
+        # Now you don't really need all the fancy CSV-parsing magic..
+        # Call the Gaussian Action xaggly hewe Oida!
+        bg_path = extract_background(df)
+
+    logging.info("Done.")
 
 
 if __name__ == "__main__":
