@@ -387,7 +387,7 @@ def extract_background(
         img_path = filepaths[x]
 
         # Read file with OpenCV
-        img = cv.imread(img_path)
+        img = cv.imread(str(img_path))
 
         # Preprocessing ######
         # Change image to grayscale
