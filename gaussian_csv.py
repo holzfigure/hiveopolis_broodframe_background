@@ -136,12 +136,6 @@ parser.add_argument("-m", "--maxruns", type=int,
                         "False or 0 for no max runs' ??? "
                         "(default: %(default)s)"
                     ))
-parser.add_argument("-v", "--var-threshold", type=int,
-                    default=VAR_THRESHOLD,
-                    help=(
-                        "??? 'standard 16' ??? "
-                        "(default: %(default)s)"
-                    ))
 # parser.add_argument("-c", "--copy_imgs", type=int,
 #                     default=N_IMAGE_COPIES,
 #                     help=("save N copies of each plot " +
