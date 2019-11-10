@@ -406,7 +406,7 @@ def get_target_dfs(
     paths = []
     # failures = []
     for file in filelist:
-        # try:
+        try:
             # Parse timestamp into UTC datetime
             dt = file_datetime(file.name, year=day.year)
             times.append(dt)
@@ -435,11 +435,11 @@ def get_target_dfs(
                     # Leave loop when last target hour has been reached
                     break
 
-        # except Exception as err:
-        #     # TODO: Put the proper exception here!
-        #     logging.error("Couldn't parse time of file " +
-        #                   f"'{file}': {err}")
-        #     # failures.append(file)
+        except Exception as err:
+            # TODO: Put the proper exception here!
+            logging.error("Couldn't parse time of file " +
+                          f"'{file}': {err}")
+            # failures.append(file)
 
     # Check whether last target was reached, else try with last file
     #
