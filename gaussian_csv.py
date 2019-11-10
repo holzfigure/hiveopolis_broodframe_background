@@ -51,8 +51,11 @@ DEPENDENCIES = [
 # PATH_OUT = Path.cwd() / 'out'
 PATH_IN = Path(
     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
-    "broodnest_bgs/assemble_paths_191108-utc_default-timefmt/csv"
+    "broodnest_bgs/assemble_paths_191110-utc-01/csv"
     # "broodnest_bgs/assemble_paths_191109-utc_my-timefmt/csv"
+)
+PATH_RAW = Path(
+    "/media/holzfigure/Data/NAS/NAS_incoming_data"
 )
 PATH_OUT = Path(
     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
@@ -62,7 +65,7 @@ PATH_OUT = Path(
 INFILE_PATTERN = "bgx_hive*_rpi*_targ*.csv"
 # INFOLDER_PATTERN = "Photos_of_Pi*/"
 OUTIMG_PREFIX = "bgx"
-BG_OUTFOLDER = "imgs"
+BG_OUTFOLDER = "bg_imgs"
 
 
 # TIME-RELATED SETTINGS
@@ -70,7 +73,7 @@ BG_OUTFOLDER = "imgs"
 LOCAL_TZ = pytz.timezone("Europe/Vienna")
 TIME_FMT = "%y%m%d-%H%M%S-utc"
 TIME_TARGET_FMT = "%y%m%d-%H"
-# DAY_FMT = "day-%y%m%d"
+DAY_FMT = "day-%y%m%d"
 
 # BACKGROUND-EXTRACTION SETTINGS
 # https://docs.opencv.org/master/d7/df6/
@@ -89,6 +92,14 @@ ADJUST_GAMMA = True
 SHADOW = False          # just returns detected shadows, we dont need it
 # Max runs if we want to limit generation, False or 0 for no max runs
 MAX_RUNS = 0
+
+# Build a lookup table mapping the pixel values [0, 255] to
+# their adjusted gamma values
+# Somehow I found the value of `gamma=1.2` to be the best in my case
+INV_GAMMA = 1.0 / 1.2
+GAMMA_LOOKUP_TABLE = np.array([
+    ((i / 255.0) ** INV_GAMMA) * 255
+    for i in np.arange(0, 256)]).astype("uint8")
 
 # Print modulus, only used for output of text
 PRINT_MODULUS = 10
@@ -154,7 +165,7 @@ ARGS = parser.parse_args()
 # del(parser)
 
 
-def initialize_io(dir_in=PATH_IN, dir_out=PATH_OUT,
+def initialize_io(dir_in=PATH_IN, dir_raw=PATH_RAW, dir_out=PATH_OUT,
                   deps=DEPENDENCIES,
                   postfix=POSTFIX, args=ARGS):
     """Set up IO-directories and files and logging."""
@@ -162,13 +173,28 @@ def initialize_io(dir_in=PATH_IN, dir_out=PATH_OUT,
     # if args.interactive or not os.path.isdir(dir_ini):
     if args.interactive or not dir_in.is_dir():
         dir_in = ioh.select_directory(
-            title="Input folder containing rpn-snapshot*.csv files",
+            title="Input folder containing bgx_hive*.csv files",
             # filetypes=[("RPN-log-CSV", "rpn-log_rpn*.csv")],
             dir_ini=dir_in)
 
         if not dir_in or not dir_in.is_dir():
             print(("No proper input directory: '{}', "
                    "returning 'None'.".format(dir_in)))
+            # Leave script
+            # sys.exit(1)
+            raise SystemExit(1)
+            return None
+
+    # Determine input folder of raw data (broodnest photos)
+    if args.interactive or not dir_raw.is_dir():
+        dir_raw = ioh.select_directory(
+            title="Input folder containing raw broodnest photo folders",
+            # filetypes=[("RPN-log-CSV", "rpn-log_rpn*.csv")],
+            dir_ini=dir_raw)
+
+        if not dir_raw or not dir_raw.is_dir():
+            print(("No proper input directory: '{}', "
+                   "returning 'None'.".format(dir_raw)))
             # Leave script
             # sys.exit(1)
             raise SystemExit(1)
@@ -246,10 +272,10 @@ def initialize_io(dir_in=PATH_IN, dir_out=PATH_OUT,
     # logging.info(f"networkx version: {nx.__version__}")
     # logging.info(f"OpenCV version: {cv.__version__}")
 
-    return dir_in, dir_out
+    return dir_in, dir_raw, dir_out
 
 
-def adjust_gamma(image, ltable):
+def adjust_gamma(image, ltable=GAMMA_LOOKUP_TABLE):
     """Apply gamma correction using the lookup table."""
     return cv.LUT(image, ltable)
 
@@ -313,29 +339,92 @@ def my_path_parser(p_str):
     return Path(p_str)
 
 
+def make_filename(path_out, prefix, time, time_fmt=TIME_FMT):
+    filepath = (
+        path_out /
+        f"{prefix}_{time.strftime(time_fmt)}.jpg"
+    )
+    return filepath
+
+
+def export_background(img, filepath,
+                      sharpen=ARGS.sharpen,
+                      adjust_gamma=ARGS.adjustgamma,
+                      ):
+    """Get the background model image and export it."""
+    # Get background image
+    # img = mog.getBackgroundImage()
+
+    # Postprocessing ######
+
+    # Sharpen the image
+    if sharpen:
+        img = unsharp_mask(img)
+
+    # Adjust gamma if there is light change
+    # NOTE: This only works on the raw image and has no effect!!
+    if adjust_gamma:
+        img = adjust_gamma(img)
+
+    # Change image to grayscale
+    # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    # Equalize grayscale image
+    # img = cv.equalizeHist(img)
+    # Add gaussian to remove noise
+    # img = cv.GaussianBlur(img, (1, 1), 0)
+    # img = cv.medianBlur(img, 1)
+    # img = cv.GaussianBlur(img, (7, 7), 1.5)
+
+    # img_bgmodel = cv.equalizeHist(img_bgmodel)
+    # END Preprocessing ######
+
+    # Write finished backgroundModels
+    # # Using string-method .replace:
+    # img_bg = str(img_path).replace(in_folder, path_out)
+    cv.imwrite(str(filepath), img)
+    logging.info(f"Exported bg-image to '{filepath}'")
+
+
 def extract_background(
-        filepaths,  # pandas series of pathlib Paths to the photos
+        df,  # pandas series of pathlib Paths to the photos
+        path_raw,
         path_out,
         bg_folder=BG_OUTFOLDER,
+        time_fmt=TIME_FMT,
+        day_fmt=DAY_FMT,
+        prefix=OUTIMG_PREFIX,
         print_modulus=PRINT_MODULUS,
         learning_rate=ARGS.learningrate,
         max_runs=ARGS.maxruns,
         history=ARGS.history,
         shadow=ARGS.shadow,
         var_threshold=ARGS.varthreshold,
-        sharpen=ARGS.sharpen,
-        adjust_gamma=ARGS.adjustgamma,
+        sharpen=ARGS.sharpen,           # just to print settings
+        adjust_gamma=ARGS.adjustgamma,  # just to print settings
         args=ARGS,
 ):
-    """Run Gaussian stuff using code from Hannes Oberreither."""
-    n_files = len(filepaths)
-    in_folder = filepaths[0].parent
-    path_out = path_out / bg_folder / in_folder.name
-    # TODO: Here fix the folder structure once hive and rpi...
-    # TODO: Here fix filename prefixes as well
+    """Run Gaussian stuff using code from Hannes Oberreither.
+
+    Assuming all files in df are from the same Hive, RPi and DAY!
+    """
+    # Parse general info
+    n_files = len(df)
+    hive = df.hive[-1]
+    rpi = df.rpi[-1]
+    in_folder = path_raw / df.path[0].parent
+    # day_str = df.time[-1].strftime(day_fmt)
+    # out_folder = f"hive{hive}_rpi{rpi}_{day_str}"
+
+    # Create output folder
+    # path_out = path_out / bg_folder / f"hive{hive}/rpi{rpi}/{out_folder}"
+    path_out = path_out / bg_folder / f"hive{hive}/rpi{rpi}"
     if not path_out.is_dir():
         path_out.mkdir(parents=True)
         logging.info(f"Created folder '{path_out}'")
+
+    # Fix file prefix
+    file_prefix = f"{prefix}_hive{hive}_rpi{rpi}"
+
     logging.info(f"Received {n_files} in '{in_folder}', "
                  f"exporting to '{path_out}'")
 
@@ -377,19 +466,19 @@ def extract_background(
     # # array = sorted(path_raw.rglob("*.jpg"),
     # #                key=os.path.getmtime, reverse=True)
 
-    # Build a lookup table mapping the pixel values [0, 255] to
-    # their adjusted gamma values
-    # Somehow I found the value of `gamma=1.2` to be the best in my case
-    inv_gamma = 1.0 / 1.2
-    ltable = np.array([
-        ((i / 255.0) ** inv_gamma) * 255
-        for i in np.arange(0, 256)]).astype("uint8")
+    # # Build a lookup table mapping the pixel values [0, 255] to
+    # # their adjusted gamma values
+    # # Somehow I found the value of `gamma=1.2` to be the best in my case
+    # inv_gamma = 1.0 / 1.2
+    # ltable = np.array([
+    #     ((i / 255.0) ** inv_gamma) * 255
+    #     for i in np.arange(0, 256)]).astype("uint8")
 
     # Iterate over all files
     for x in range(n_files):
 
         # We can loop now through our array of images
-        img_path = filepaths[x]
+        img_path = df.path[x]
 
         # Read file with OpenCV
         img = cv.imread(str(img_path))
@@ -406,49 +495,16 @@ def extract_background(
         # END Preprocessing ######
 
         # Apply algorithm to generate background model
-        img_output = mog.apply(img, learning_rate)
-        # logging.debug(f"img_out: {img_output}")
-        # Threshold for foreground mask, we don't use the
-        # foreground mask so we dont need it?
-        # img_output = cv.threshold(img_output, 10, 255, cv.THRESH_BINARY);
+        # img_output = mog.apply(img, learning_rate)
+        # # logging.debug(f"img_out: {img_output}")
+        # # Threshold for foreground mask, we don't use the
+        # # foreground mask so we dont need it?
+        # # img_output = cv.threshold(img_output, 10, 255, cv.THRESH_BINARY);
+        mog.apply(img, learning_rate)
 
-        # Get background image
-        img_bgmodel = mog.getBackgroundImage()
-
-        # Postprocessing ######
-
-        # Sharpen the image
-        if sharpen:
-            img_bgmodel = unsharp_mask(img_bgmodel)
-
-        # Adjust gamma if there is light change
-        # NOTE: This only works on the raw image and has no effect!!
-        if adjust_gamma:
-
-
-            img = adjust_gamma(img, ltable)
-
-        # Change image to grayscale
-        # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        # Equalize grayscale image
-        # img = cv.equalizeHist(img)
-        # Add gaussian to remove noise
-        # img = cv.GaussianBlur(img, (1, 1), 0)
-        # img = cv.medianBlur(img, 1)
-        # img = cv.GaussianBlur(img, (7, 7), 1.5)
-
-        # img_bgmodel = cv.equalizeHist(img_bgmodel)
-        # END Preprocessing ######
-
-        # Write finished backgroundModels
-        # # Using string-method .replace:
-        # img_bg = str(img_path).replace(in_folder, path_out)
-        # Using pathlib Path method .with_parent():
-        # TODO: Use the proper filename, when it's in the dataframe
-        # TODO: Fix folder structure to Hives and RPis once in dataframe
-        bg_path = path_out / img_path.name
-        cv.imwrite(str(bg_path), img_bgmodel)
-        logging.info(f"Exported bg-image to '{bg_path}'")
+        if args.debug:
+            filepath = make_filename(path_out, file_prefix, df.time[x])
+            export_background(mog.getBackgroundImage(), filepath)
 
         # Break if max runs is defined and reached
         if max_runs > 0:
@@ -459,16 +515,17 @@ def extract_background(
             logging.info(f"Current image: {img_path}\n"
                          f"Runs left: {n_files - x}")
 
-    # TODO: Export only the last image!
-    # END
+    logging.info(f"Iterated over all files in '{in_folder}'")
+    filepath = make_filename(path_out, file_prefix, df.time[x])
+    export_background(mog.getBackgroundImage(), filepath)
 
-    return bg_path.parent
+    return None
 
 
 def main(file_pattern=INFILE_PATTERN, args=ARGS):
     """Extract the background from large amounts of broodnest photos."""
     # Initialize IO-directories and setup logging
-    path_in, path_out = initialize_io()
+    path_in, path_raw, path_out = initialize_io()
 
     # Get Paths to all CSV-files
     csv_list = sorted(path_in.rglob(file_pattern))
@@ -488,7 +545,7 @@ def main(file_pattern=INFILE_PATTERN, args=ARGS):
 
         # Now you don't really need all the fancy CSV-parsing magic..
         # Call the Gaussian Action xaggly hewe Oida!
-        bg_path = extract_background(df.path, path_out)
+        bg_path = extract_background(df, path_raw, path_out)
 
     logging.info("Done.")
 
