@@ -307,7 +307,7 @@ def pack_dataframe(dt_targ, times, paths,
             #              columns=["time", "path"])
             df = pd.DataFrame(
                 index=times,
-                data=[hives, rpis, paths, names],
+                data=np.array([hives, rpis, paths, names]).T,
                 columns=["hive", "rpi", "path", "name"],
             )
             df.index.name = "time"
