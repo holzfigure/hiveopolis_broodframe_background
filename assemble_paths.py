@@ -55,6 +55,7 @@ INFILE_PATTERN = "pi*_hive*broodn_*.jpg"
 # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
 INFOLDER_PATTERN = "Photos_of_Pi*/"
 OUTCSV_PREFIX = "bgx"
+OUTRAW_PREFIX = "raw"
 
 # TIME-RELATED PARAMETERS
 EXPORT_HOURS_UTC = [2, 8, 14, 20]  # must be sorted!
@@ -216,40 +217,56 @@ def file_datetime(
     return dt_utc
 
 
-# def assemble_timestamps(filelist, year=YEAR):
-#     """Return a list of timestamps of the same length as the filelist."""
-#
-#     times = []
-#     # failures = []
-#     filelist_out = []
-#     for file in filelist:
-#         try:
-#             # parse timestamp
-#
-#             times.append(file_datetime(file.name, year=year))
-#             filelist_out.append(file)
-#         except Exception as err:
-#             logging.error("Couldn't parse time of file " +
-#                           f"'{file}': {err}")
-#             # failures.append(file)
-#
-#     # if len(failures) > 0:
-#     #     logging.warning("Failed files:")
-#     #     for fail in failures:
-#     #         logging.warning(f"{fail}")
-#
-#     # Convert to numpy arrays
-#     # np.array(timestamps).astype("datetime64")
-#     times = np.array(times)
-#     filelist_out = np.array(filelist_out)
-#
-#     # Sort by time
-#     time_sort = np.argsort(times)
-#     times = times[time_sort]
-#     filelist_out = filelist_out[time_sort]
-#
-#     logging.info(f"Returning {len(times)} files and times")
-#     return times, filelist_out
+def convert_paths(paths, times,
+                  time_fmt=TIME_FMT,
+                  prefix=OUTRAW_PREFIX,
+                  ):
+    """Take only the relevant relative path and create nice filename.
+
+    Assuming that all files stem from the same Hive and RPi.
+    """
+    # assert len(paths) == len(times), "Paths and times vary in length!"
+    # Parse Hive and RPi
+    filename = paths[0].name
+    trunc = filename.split("broodn")[0]
+    rpi = int(trunc.split("pi")[-1][0])
+    hive = int(trunc.split("hive")[-1][0])
+    logging.debug(f"Filename: {filename}, rpi={rpi}, hive={hive}")
+
+    # NOTE: Temporary hack to fix wrongly named hive2 files
+    # TODO: REMOVE, especially when "hive2" really exists!
+    if hive == 2:
+        hive = 1
+        rpi = 2
+        logging.warning(f"Changed Hive and RPi numbers: "
+                        f"Filename: {filename}, rpi={rpi}, hive={hive}")
+
+    fileprefix = f"{prefix}_hive{hive}_rpi{rpi}"
+
+    rel_paths = []
+    nice_names = []
+    for i in range(len(paths)):
+        path = paths[i]
+        time = times[i]
+
+        # Parse relative path
+        rel_path = Path(f"{path.parent.name}/{path.name}")
+        rel_paths.append(rel_path)
+
+        # Create nice filename
+        # # Get name of the output file
+        # outfile = outfolder / f"hive1_rpi{rpi_num}_{t_str}.jpg"
+        name = f"{fileprefix}_{time.strftime(time_fmt)}.jpg"
+        nice_names.append(name)
+
+    logging.debug(f"Relativized {len(rel_paths)} paths and "
+                  f"assembled nice names, e.g. '{name}'")
+
+    # assert all lists are same lengths (new & old)...
+    hive_col = [hive] * len(rel_paths)
+    rpi_col = [rpi] * len(rel_paths)
+
+    return rel_paths, nice_names, hive_col, rpi_col
 
 
 def pack_dataframe(dt_targ, times, paths,
@@ -282,14 +299,16 @@ def pack_dataframe(dt_targ, times, paths,
             times = times[-history:]
             paths = paths[-history:]
 
+            paths, names, hives, rpis = convert_paths(paths, times)
+
             # Assemble the data in a pandas dataframe
             # pd.DataFrame({'time': times, 'path': paths})
             # pd.DataFrame(np.array([times, paths]).T,
             #              columns=["time", "path"])
             df = pd.DataFrame(
                 index=times,
-                data=paths,
-                columns=["path"],
+                data=[hives, rpis, paths, names],
+                columns=["hive", "rpi", "path", "name"],
             )
             df.index.name = "time"
             df.sort_index(inplace=True)
