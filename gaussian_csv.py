@@ -478,7 +478,7 @@ def extract_background(
     for x in range(n_files):
 
         # We can loop now through our array of images
-        img_path = df.path[x]
+        img_path = path_raw / df.path[x]
 
         # Read file with OpenCV
         img = cv.imread(str(img_path))
