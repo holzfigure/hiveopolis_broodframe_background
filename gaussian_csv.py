@@ -503,7 +503,7 @@ def extract_background(
         mog.apply(img, learning_rate)
 
         if args.debug:
-            filepath = make_filename(path_out, file_prefix, df.time[x])
+            filepath = make_filename(path_out, file_prefix, df.index[x])
             export_background(mog.getBackgroundImage(), filepath)
 
         # Break if max runs is defined and reached
@@ -516,7 +516,7 @@ def extract_background(
                          f"Runs left: {n_files - x}")
 
     logging.info(f"Iterated over all files in '{in_folder}'")
-    filepath = make_filename(path_out, file_prefix, df.time[x])
+    filepath = make_filename(path_out, file_prefix, df.index[x])
     export_background(mog.getBackgroundImage(), filepath)
 
     return None
