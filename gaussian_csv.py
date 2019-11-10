@@ -412,12 +412,15 @@ def extract_background(
     hive = df.hive[-1]
     rpi = df.rpi[-1]
     in_folder = path_raw / df.path[0].parent
-    # day_str = df.time[-1].strftime(day_fmt)
-    # out_folder = f"hive{hive}_rpi{rpi}_{day_str}"
 
     # Create output folder
-    # path_out = path_out / bg_folder / f"hive{hive}/rpi{rpi}/{out_folder}"
     path_out = path_out / bg_folder / f"hive{hive}/rpi{rpi}"
+    if args.debug:
+        # path_out = path_out / bg_folder / f"hive{hive}/rpi{rpi}/{out_folder}"
+        day_str = df.time[-1].strftime(day_fmt)
+        out_folder = f"hive{hive}_rpi{rpi}_{day_str}"
+        path_out = path_out / out_folder
+
     if not path_out.is_dir():
         path_out.mkdir(parents=True)
         logging.info(f"Created folder '{path_out}'")
