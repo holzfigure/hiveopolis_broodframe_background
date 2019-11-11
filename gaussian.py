@@ -143,17 +143,16 @@ def main(
     #       p.stat().st_mtime
     # load all img as array reverse sorted with oldest at beginning
     # img name: e.g. pi1_hive1broodn_1_8_0_0_3.jpg
-    array = sorted(glob.iglob(path_raw + '/*.jpg'),
-                   key=os.path.getmtime, reverse=True)
-    # Try this:
-    # array = sorted(path_raw.rglob("*.jpg"),
+    # array = sorted(glob.iglob(path_raw + '/*.jpg'),
     #                key=os.path.getmtime, reverse=True)
-
+    # Try this:
+    array = sorted(path_raw.rglob("*.jpg"),
+                   key=os.path.getmtime)  # , reverse=True)
 
     # Create output folder
     # try:
-    if not os.path.isdir(path_out):
-        os.mkdir(path_out)
+    if not path_out.is_dir():
+        path_out.mkdir(parents=True)
     # except:
     else:
         print(f"Folder '{path_out}' already exists")
@@ -203,8 +202,8 @@ def main(
         # END Preprocessing ######
 
         # Apply algorithm to generate background model
-        img_output = mog.apply(img, learning_rate)
-        print(f"img_out: {img_output}")
+        mog.apply(img, learning_rate)
+        # print(f"img_out: {img_output}")
         # Threshold for foreground mask, we don't use the
         # foreground mask so we dont need it?
         # img_output = cv.threshold(img_output, 10, 255, cv.THRESH_BINARY);
@@ -220,7 +219,7 @@ def main(
 
         # Adjust gamma if there is light change
         if adjust_gamma:
-            img = adjust_gamma(img, ltable)
+            img_bgmodel = adjust_gamma(img_bgmodel, ltable)
 
         # Change image to grayscale
         # img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -235,8 +234,8 @@ def main(
         # END Preprocessing ######
 
         # Write finished backgroundModels
-        img_bg = img_path.replace(path_raw, path_out)
-        cv.imwrite(img_bg, img_bgmodel)
+        out_img_path = img_path.replace(path_raw, path_out)
+        cv.imwrite(out_img_path, img_bgmodel)
 
         # Break if max runs is defined and reached
         if max_runs > 0:
