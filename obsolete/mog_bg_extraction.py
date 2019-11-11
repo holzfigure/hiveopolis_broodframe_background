@@ -22,9 +22,9 @@ described in:
 # Standard libraries
 # import os
 # import glob
-import logging
+# import logging
 import argparse
-import platform
+# import platform
 from pathlib import Path
 from datetime import datetime
 
@@ -149,15 +149,15 @@ def extract_background(
 
     if not path_out.is_dir():
         path_out.mkdir(parents=True)
-        logging.info(f"Created folder '{path_out}'")
+        print(f"Created folder '{path_out}'")
 
     # Fix file prefix
     file_prefix = f"{prefix}_hive{hive}_rpi{rpi}"
 
-    logging.info(f"Received {n_files} in '{in_folder}', "
-                 f"exporting to '{path_out}'")
+    print(f"Received {n_files} in '{in_folder}', "
+          f"exporting to '{path_out}'")
 
-    logging.info(
+    print(
         "\n======= MOG SETTINGS =======\n"
         # f"Path raw:      {in_folder}\n"
         # f"Path output:   {path_out}\n"
@@ -241,10 +241,10 @@ def extract_background(
                 break
 
         if x % print_modulus == 0:
-            logging.info(f"Current image: {img_path}\n"
-                         f"Runs left: {n_files - x}")
+            print(f"Current image: {img_path}\n"
+                  f"Runs left: {n_files - x}")
 
-    logging.info(f"Iterated over all files in '{in_folder}'")
+    print(f"Iterated over all files in '{in_folder}'")
     filepath = make_filename(path_out, file_prefix, df.index[x])
     export_background(mog.getBackgroundImage(), filepath)
 
@@ -258,9 +258,9 @@ def main(file_pattern=INFILE_PATTERN, args=ARGS):
 
     # Get Paths to all CSV-files
     csv_list = sorted(path_in.rglob(file_pattern))
-    logging.info(f"Found {len(csv_list)} files "
-                 f"matching pattern '{file_pattern}' "
-                 f"in '{path_in}'.")
+    print(f"Found {len(csv_list)} files "
+          f"matching pattern '{file_pattern}' "
+          f"in '{path_in}'.")
 
     for csv_path in csv_list:
         logging.info(f"Reading '{csv_path.name}'")
