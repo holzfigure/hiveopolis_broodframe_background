@@ -349,7 +349,7 @@ def make_filename(path_out, prefix, time, time_fmt=TIME_FMT):
 
 def export_background(img, filepath,
                       sharpen=ARGS.sharpen,
-                      adjust_gamma=ARGS.adjustgamma,
+                      adjustgamma=ARGS.adjustgamma,
                       ):
     """Get the background model image and export it."""
     # Get background image
@@ -362,8 +362,7 @@ def export_background(img, filepath,
         img = unsharp_mask(img)
 
     # Adjust gamma if there is light change
-    # NOTE: This only works on the raw image and has no effect!!
-    if adjust_gamma:
+    if adjustgamma:
         img = adjust_gamma(img)
 
     # Change image to grayscale
