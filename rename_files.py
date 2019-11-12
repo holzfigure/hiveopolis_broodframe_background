@@ -112,7 +112,7 @@ def main(path_in=PATH_IN, path_out=PATH_OUT,
     """Iterate over all broodnest photos and rename them."""
     # Iterate over all images
     n = 0
-    for file in path_in.rglob("pi*_hive1broodn_*.jpg"):
+    for file in path_in.rglob(file_pattern):
         n += 1
 
         # Get nice UTC timestrings
