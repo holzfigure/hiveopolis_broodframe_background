@@ -72,8 +72,7 @@ DIR_IN = Path(
     "broodnest_bgs"
 )
 DIR_OUT = Path(
-    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
-    "broodnest_bgs"
+    "/media/holzfigure/Data/local_stuff/Hiveopolis/broodnests"
 )
 
 POSTFIX_DIR = "vid"
@@ -182,7 +181,7 @@ def initialize_io(
     if args.interactive:
         dir_out = ioh.select_directory(
             title="output folder",
-            dir_ini=dir_in)
+            dir_ini=dir_out)
         # Make sure directory is valid
         if not dir_out or not dir_out.is_dir():
             print(("No proper output directory: '{}', "
