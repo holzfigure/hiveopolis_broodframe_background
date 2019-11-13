@@ -984,11 +984,11 @@ def main(
                 try:
                     # Read image
                     img = cv2.imread(str(p))
-                    img_idx += 1
 
                     # Make timestamp box
                     if args.timestamp and got_times:
                         dt = times[img_idx]
+                        img_idx += 1
                         # ts = timestamps[img_idx]
 
                         img = label_frame(img, p.name, dt)
