@@ -122,11 +122,13 @@ parser.add_argument("-a", "--all", action="store_true",
                           "be prompted for start and end times"))
 parser.add_argument("-n", "--name", action="store_true",
                     help="change default video-filename")
+parser.add_argument("-t", "--timestamp", action="store_true",
+                    help="timestamp video")
 parser.add_argument("-p", "--pattern", type=str,
                     default=DEF_IMG_PATTERN,
                     help=(f"define search pattern [e.g.: ''*.jpg'], " +
                           f"extension will be parsed from it " +
-                          f"(default: {DEF_IMG_PATTERN})"))
+                          f"(default: %(default)s)"))
 # parser.add_argument("-x", "--extension", type=str,
 #                     default=DEF_EXT,
 #                     help=("image format " +
