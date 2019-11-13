@@ -786,7 +786,7 @@ def label_frame(frame, filename, dt_utc,
     # logging.debug("frame.shape: {}".format(frame.shape))
     height, width, chans = frame.shape
     rect_height = 35
-    rect_width = 230
+    rect_width = 400
 
     # # Calculate timestamp
     # sec = frame_i / float(fps)
@@ -798,7 +798,7 @@ def label_frame(frame, filename, dt_utc,
 
     # Make label
     # text = "exp{:02} - {:02}:{:02}".format(exp, min, sec)
-    text = f"Hive{hive} RPi{rpi}\n{dt_utc.strftime(time_fmt)}"
+    text = f"Hive{hive} RPi{rpi} {dt_utc.strftime(time_fmt)}"
     # logging.debug("Putting text: {}".format(text))
 
     # Set rectangle coordinates
