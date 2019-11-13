@@ -67,8 +67,14 @@ DEPENDENCIES = [
         # Path("holzhelp/holzplot.py"),
         ]
 
-DIR_IN = Path("/home/biohybrid/experiments/BenchWall")
-DIR_OUT = Path("/home/biohybrid/experiments/BenchWall")
+DIR_IN = Path(
+    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
+    "broodnest_bgs"
+)
+DIR_OUT = Path(
+    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
+    "broodnest_bgs"
+)
 
 POSTFIX_DIR = "vid"
 VID_PREFIX = "v_"
@@ -156,29 +162,41 @@ def initialize_io(
     # if args.interactive or not os.path.isdir(dir_ini):
     if args.interactive or not dir_ini.is_dir():
         dir_in = ioh.select_directory(
-            title="input experiment folder",
+            title="input folder containing images",
             dir_ini=dir_ini)
-
-        # TODO: Make ioh.select_dictionary return a pathlib.Path
-        dir_in = Path(dir_in)
+        # # NOTE: ioh.select_dictionary return a pathlib.Path
+        # dir_in = Path(dir_in)
 
         if not dir_in or not dir_in.is_dir():
             print(("No proper input directory: '{}', "
-                   "returning 'None'.".format(dir_in)))
-            return None
+                   "aborting...".format(dir_in)))
+            raise SystemExit(1)
+            # return None
     else:
         dir_in = dir_ini
 
-    # set output level
-    # TODO: remove out_level here?
-    out_level = -1  # possibly changed later!
-    # setup environment (with holzhelp)
+    # Determine output folder
+    if args.interactive:
+        dir_out = ioh.select_directory(
+            title="output folder",
+            dir_ini=dir_in)
+        # Make sure directory is valid
+        if not dir_out or not dir_out.is_dir():
+            print(("No proper output directory: '{}', "
+                   "aborting...".format(dir_in)))
+            raise SystemExit(1)
+        out_level = 1  # As subdirectory in the given directory
+    else:
+        dir_out = dir_in
+        out_level = -1  # As sibling to the given directory
+
+    # setup environment (with iohelp)
     # hostname = socket.gethostname()
     # thisfile = os.path.basename(__file__)
     # NOTE: We want only the name, this also works,
     #       if __file__ returns a full path AND if not
     thisfile = Path(__file__).name
-    dir_out, thisname = ioh.setup_environment(thisfile, dir_targ=dir_in,
+    dir_out, thisname = ioh.setup_environment(thisfile, dir_targ=dir_out,
                                               level=out_level, new_dir=True,
                                               postfix_dir=postfix,
                                               daystamp=True,
