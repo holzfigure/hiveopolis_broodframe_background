@@ -81,6 +81,7 @@ VID_PREFIX = "v_"
 # LINK_PREFIX = "im"
 # TIMEZONE = "Europe/Vienna"
 TIME_FMT = "%y%m%d-%H%M%S-utc"
+TIMESTAMP_FMT = "%y-%m-%d %H:%M UTC"
 DAY_FMT = "%y%m%d"
 TIME_MATCH = "-utc"
 TIME_FMT_TRIMMED = TIME_FMT.split(TIME_MATCH)[0]
@@ -765,6 +766,71 @@ def propose_name(name, duration, speed, dir_out,
     return filepath
 
 
+def parse_expinfo(filename):
+    """Read Hive and RPi number from filename.
+
+    Filename e.g.:
+    bgx_hive1_rpi1_190727-140003-utc.jpg
+    """
+    hive = int(filename.split("hive")[-1][0])
+    rpi = int(filename.split("rpi")[-1][0])
+
+    return hive, rpi
+
+
+def label_frame(frame, filename, dt_utc,
+                time_fmt=TIMESTAMP_FMT, args=ARGS):
+    """Create a textbox with timestamp and infos."""
+    # logging.debug("frame.shape: {}".format(frame.shape))
+    height, width, chans = frame.shape
+    rect_height = 35
+    rect_width = 230
+
+    # # Calculate timestamp
+    # sec = frame_i / float(fps)
+    # min = int(sec / 60)
+    # sec = int(sec % 60)
+
+    # NOTE: Broodnest experiment-specific!
+    hive, rpi = parse_expinfo(filename)
+
+    # Make label
+    # text = "exp{:02} - {:02}:{:02}".format(exp, min, sec)
+    text = f"Hive{hive} RPi{rpi}\n{dt_utc.strftime(time_fmt)}"
+    # logging.debug("Putting text: {}".format(text))
+
+    # Set rectangle coordinates
+    # rect_pt1 = (height - rect_height, width - rect_width)
+    # rect_pt2 = (height, width)
+    rect_pt1 = (width - rect_width, height - rect_height)
+    rect_pt2 = (width, height)
+
+    # Set text coordinates
+    # text_origin = (height - 1, rect_pt1[1] + 1)
+    text_origin = (rect_pt1[0] + 5, height - 10)
+
+    # Set colors
+    text_color = (255, 255, 255)
+    rect_color = (0, 0, 0)
+    rect_thickness = cv2.FILLED
+    # Draw rectangle
+    cv2.rectangle(frame, rect_pt1, rect_pt2,
+                  rect_color, rect_thickness)
+    # logging.debug("Placed rectangle at ({}, {})".format(
+    #     rect_pt1, rect_pt2))
+
+    # Write text
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    fontsize = 0.7
+    text_thickness = 1
+    linetype = cv2.LINE_AA  # LINE_8
+    cv2.putText(frame, text, text_origin, font, fontsize,
+                text_color, text_thickness, linetype)
+    # logging.debug("Placed text at {}".format(text_origin))
+
+    return frame
+
+
 def log_info(frame_count, n_frames, t0, args=ARGS):
     """Calculate progress and output to screen and logfile."""
     # Take time
@@ -907,6 +973,7 @@ def main(
     t0 = time.time()
     try:
         frame_count = 0
+        img_idx = 0
         for p in img_paths:
 
             # Check filesize
@@ -915,6 +982,15 @@ def main(
                 try:
                     # Read image
                     img = cv2.imread(str(p))
+                    img_idx += 1
+
+                    # Make timestamp box
+                    if args.timestamp and got_times:
+                        dt = times[img_idx]
+                        # ts = timestamps[img_idx]
+
+                        img = label_frame(img, p.name, dt)
+
                     # Write image to movie
                     for i in range(args.multiply):
                         # https://stackoverflow.com/questions/11337499/
