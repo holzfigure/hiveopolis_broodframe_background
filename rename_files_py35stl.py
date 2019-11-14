@@ -180,8 +180,11 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
     # n_folders = len(folders)
     print("Number of folders: {}".format(len(folders)))
     for folder in folders:
-        folder = Path(folder)
-        for file in folder.glob(file_pattern):
+        # folder = Path(folder)
+
+        files = sorted(glob.iglob(str(folder) + '/' + file_pattern),
+                       key=os.path.getmtime)  # , reverse=True)
+        for file in files:
             n += 1
 
             # Get nice UTC timestrings
