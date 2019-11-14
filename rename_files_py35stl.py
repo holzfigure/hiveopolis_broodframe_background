@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Rename files such that timestamps are in UTC and sort correctly."""
-# import os
+import os
 import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -171,7 +171,11 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
     n = 0
     # for file in path_in.rglob(file_pattern):
     # Fails in NAS because of ../incoming_data/#recycle/.. folders!
-    for folder in path_in.glob(folder_pattern):
+    folders = sorted(path_in.glob(folder_pattern),
+                     key=os.path.getmtime)  # , reverse=True)
+    # n_folders = len(folders)
+    print("Number of folders: {}").format(len(folders))
+    for folder in folders:
         for file in folder.glob(file_pattern):
             n += 1
 
@@ -185,8 +189,8 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
                 rpi = int(trunc.split("pi")[-1][0])
                 hive = int(trunc.split("hive")[-1][0])
                 # print(f"Filename: {filename}, rpi={rpi}, hive={hive}")
-                print("Filename: {}, rpi={}, hive={}".format(
-                    filename, rpi, hive))
+                # print("Filename: {}, rpi={}, hive={}".format(
+                #     filename, rpi, hive))
 
                 # NOTE: Temporary hack to fix wrongly named hive2 files
                 # TODO: REMOVE, especially when "hive2" really exists!
@@ -239,7 +243,7 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
 
             # try:
             shutil.copy2(str(file), str(outfile))
-            print("Copied {} to {}".format(file, outfile))
+            # print("Copied {} to {}".format(file, outfile))
             # except IsADirectoryError as err:
             #     print("IsADirectoryError: {}".format(err))
             #     outfile =
