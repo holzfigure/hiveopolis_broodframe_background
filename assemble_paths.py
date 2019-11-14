@@ -5,13 +5,8 @@ Look through the original raw folders and for every target timepoint,
 assemble a pandas dataframe containing the UTC times and filepaths of
 the photos needed to run the background extraction algorithm.
 
-Each such dataframe is exported as a CSV file.
-
-TODO: put the proper filenames in the table,
-TODO: put columns for hive and rpi
-TODO: put formatted timestring in the table
-TODO: only put the relative path to the file (including the parent folder)
-
+Each such dataframe is exported as a CSV file containing the
+time, actual filename, desired filename, hive and rpi numbers.
 """
 
 # Basic libraries
@@ -166,6 +161,7 @@ def initialize_io(dir_in=PATH_RAW, dir_out=PATH_OUT,
     #     os_ver = distro.linux_distribution()
 
     # Display versions of used third-party libraries
+    logging.info(f"pytz version: {pytz.__version__}")
     # logging.info("matplotlib version: {}".format(matplotlib.__version__))
     # logging.info(f"matplotlib version: {matplotlib.__version__}")
     logging.info(f"numpy version: {np.__version__}")

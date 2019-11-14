@@ -265,6 +265,7 @@ def initialize_io(dir_in=PATH_IN, dir_raw=PATH_RAW, dir_out=PATH_OUT,
     #     os_ver = distro.linux_distribution()
 
     # Display versions of used third-party libraries
+    logging.info(f"pytz version: {pytz.__version__}")
     # logging.info("matplotlib version: {}".format(matplotlib.__version__))
     # logging.info(f"matplotlib version: {matplotlib.__version__}")
     logging.info(f"numpy version: {np.__version__}")
