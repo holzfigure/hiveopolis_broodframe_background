@@ -164,78 +164,89 @@ def get_utc_timestrings(fn, year=YEAR,  # local_tz=LOCAL_TZ,
 
 
 def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
-         file_pattern=INFILE_PATTERN):
+         file_pattern=INFILE_PATTERN,
+         folder_pattern=INFOLDER_PATTERN):
     """Iterate over all broodnest photos and rename them."""
     # Iterate over all images
     n = 0
-    for file in path_in.rglob(file_pattern):
-        n += 1
+    # for file in path_in.rglob(file_pattern):
+    # Fails in NAS because of ../incoming_data/#recycle/.. folders!
+    for folder in path_in.glob(folder_pattern):
+        for file in folder.glob(file_pattern):
+            n += 1
 
-        # Get nice UTC timestrings
-        t_str, day_str = get_utc_timestrings(file.name)
+            # Get nice UTC timestrings
+            t_str, day_str = get_utc_timestrings(file.name)
 
-        if t_str is not None:
-            # Parse Hve and RPi took photo
-            filename = file.name
-            trunc = filename.split("broodn")[0]
-            rpi = int(trunc.split("pi")[-1][0])
-            hive = int(trunc.split("hive")[-1][0])
-            # print(f"Filename: {filename}, rpi={rpi}, hive={hive}")
-            print("Filename: {}, rpi={}, hive={}".format(
-                filename, rpi, hive))
+            if t_str is not None:
+                # Parse Hve and RPi took photo
+                filename = file.name
+                trunc = filename.split("broodn")[0]
+                rpi = int(trunc.split("pi")[-1][0])
+                hive = int(trunc.split("hive")[-1][0])
+                # print(f"Filename: {filename}, rpi={rpi}, hive={hive}")
+                print("Filename: {}, rpi={}, hive={}".format(
+                    filename, rpi, hive))
 
-            # NOTE: Temporary hack to fix wrongly named hive2 files
-            # TODO: REMOVE, especially when "hive2" really exists!
-            if hive == 2:
-                hive = 1
-                rpi = 2
-                print(
-                    "WARNING: Changed Hive and RPi numbers: "
-                    # f"Filename: {filename}, rpi={rpi}, hive={hive}"
-                    "Filename: {}, rpi={}, hive={}".format(
-                        filename, rpi, hive)
+                # NOTE: Temporary hack to fix wrongly named hive2 files
+                # TODO: REMOVE, especially when "hive2" really exists!
+                if hive == 2:
+                    hive = 1
+                    rpi = 2
+                    print(
+                        "WARNING: Changed Hive and RPi numbers: "
+                        # f"Filename: {filename}, rpi={rpi}, hive={hive}"
+                        "Filename: {}, rpi={}, hive={}".format(
+                            filename, rpi, hive)
+                    )
+                # Get name of output folder
+                # outfolder = (path_out / f"rpi{rpi_num}" /
+                #              f"hive1_rpi{rpi_num}_{day_str}")
+                outfolder = (
+                        path_out /
+                        ("hive" + str(hive)) /
+                        ("rpi" + str(rpi)) /
+                        "hive{}_rpi{}_{}".format(hive, rpi, day_str)
                 )
-            # Get name of output folder
-            # outfolder = (path_out / f"rpi{rpi_num}" /
-            #              f"hive1_rpi{rpi_num}_{day_str}")
-            outfolder = (
-                    path_out / ("hive" + str(hive)) / ("rpi" + str(rpi)) /
-                    "hive{}_rpi{}_{}".format(hive, rpi, day_str)
-            )
 
-            # Create outfolder if necessary
-            if not outfolder.is_dir():
-                outfolder.mkdir(parents=True)
-                # print(f"Created folder '{outfolder}'")
-                print("Created folder '{}'".format(outfolder))
+                # Create outfolder if necessary
+                if not outfolder.is_dir():
+                    outfolder.mkdir(parents=True)
+                    # print(f"Created folder '{outfolder}'")
+                    print("Created folder '{}'".format(outfolder))
 
-            # Get name of the output file
-            # outfile = outfolder / f"hive1_rpi{rpi}_{t_str}.jpg"
-            outfile = outfolder / "hive{}_rpi{}_{}.jpg".format(
-                hive, rpi, t_str)
+                # Get name of the output file
+                # outfile = outfolder / f"hive1_rpi{rpi}_{t_str}.jpg"
+                outfile = outfolder / "hive{}_rpi{}_{}.jpg".format(
+                    hive, rpi, t_str)
 
-        else:
-            print(
-                "ERROR: Found file possibly in DST-transition: "
-                "{}".format(file)
-            )
-            outpath = path_err / file.parent.name
-            if not outpath.is_dir():
-                outpath.mkdir(parents=True)
-                print("Created folder '{}'".format(outpath))
-            outfile = outpath / filename
+            else:
+                print(
+                    "ERROR: Found file possibly in DST-transition: "
+                    "{}".format(file)
+                )
+                outpath = path_err / file.parent.name
+                if not outpath.is_dir():
+                    outpath.mkdir(parents=True)
+                    print("Created folder '{}'".format(outpath))
+                outfile = outpath / filename
 
-        # Copy the file (while attempting to keep metadata)
-        if outfile.is_file():
-            print("WARNING: File '{}' exists!".format(outfile))
-            outfile = outfile.with_name(outfile.name + "_DUPLICATE")
-            print("WARNING: Renamed to '{}'".format(outfile))
+            # Copy the file (while attempting to keep metadata)
+            if outfile.is_file():
+                print("WARNING: File '{}' exists!".format(outfile))
+                outfile = outfile.with_name(outfile.name + "_DUPLICATE")
+                print("WARNING: Renamed to '{}'".format(outfile))
 
-        shutil.copy2(str(file), str(outfile))
+            # try:
+            shutil.copy2(str(file), str(outfile))
+            print("Copied {} to {}".format(file, outfile))
+            # except IsADirectoryError as err:
+            #     print("IsADirectoryError: {}".format(err))
+            #     outfile =
 
-        if n % 1000 == 0:
-            # print(f"Handled {n} files for now..")
-            print("Handled {} files for now..".format(n))
+            if n % 1000 == 0:
+                # print(f"Handled {n} files for now..")
+                print("Handled {} files for now..".format(n))
 
 
 if __name__ == "__main__":
