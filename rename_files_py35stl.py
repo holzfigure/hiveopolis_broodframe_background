@@ -8,22 +8,24 @@ from datetime import datetime, timedelta
 # import pytz
 
 # PATH_IN = Path("/media/holzfigure/Data/NAS/NAS_incoming_data")
-PATH_IN = Path(
-    "/media/holzfigure/Data/local_stuff/Hiveopolis/"
-    "broodnests/sample_raw_folders"
-)
 # PATH_OUT = Path(
 #     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
-#     "broodnest_obs/hive1"
+#     "broodnest_obs"
 # )
-PATH_OUT = Path(
-    "/media/holzfigure/Data/local_stuff/Hiveopolis/"
-    "broodnests/new_scheme"
-)
-PATH_ERR = Path(
-    "/media/holzfigure/Data/local_stuff/Hiveopolis/"
-    "broodnests/new_scheme/DST_troubles"
-)
+
+# PATH_IN = Path(
+#     "/media/holzfigure/Data/local_stuff/Hiveopolis/"
+#     "broodnests/sample_raw_folders"
+# )
+# PATH_OUT = Path(
+#     "/media/holzfigure/Data/local_stuff/Hiveopolis/"
+#     "broodnests/new_scheme"
+# )
+
+PATH_IN = Path("/volume1/incoming_data")
+PATH_OUT = Path("/volume1/incoming_data/Hiveopolis/broodnest_obs")
+
+PATH_ERR = Path(PATH_OUT / "DST_troubles")
 
 
 # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
