@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 # import pytz
 
-PATH_IN = Path("/media/holzfigure/Data/NAS/NAS_incoming_data")
+# PATH_IN = Path("/media/holzfigure/Data/NAS/NAS_incoming_data")
 PATH_IN = Path(
     "/media/holzfigure/Data/local_stuff/Hiveopolis/"
     "broodnests/sample_raw_folders"
@@ -192,7 +192,7 @@ def main(path_in=PATH_IN, path_out=PATH_OUT,
             # outfolder = (path_out / f"rpi{rpi_num}" /
             #              f"hive1_rpi{rpi_num}_{day_str}")
             outfolder = (
-                    path_out / "rpi" + str(rpi) /
+                    path_out / ("rpi" + str(rpi)) /
                     "hive{}_rpi{}_{}".format(hive, rpi, day_str)
             )
 
