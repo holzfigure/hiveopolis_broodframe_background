@@ -185,6 +185,7 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
         files = sorted(glob.iglob(str(folder) + '/' + file_pattern),
                        key=os.path.getmtime)  # , reverse=True)
         for file in files:
+            file = Path(file)
             n += 1
 
             # Get nice UTC timestrings
