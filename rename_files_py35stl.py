@@ -226,6 +226,11 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
             outfile = outpath / filename
 
         # Copy the file (while attempting to keep metadata)
+        if outfile.is_file():
+            print("WARNING: File '{}' exists!".format(outfile))
+            outfile = outfile.with_name(outfile.name + "_DUPLICATE")
+            print("WARNING: Renamed to '{}'".format(outfile))
+
         shutil.copy2(str(file), str(outfile))
 
         if n % 1000 == 0:
