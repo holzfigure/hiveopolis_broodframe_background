@@ -180,6 +180,7 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
     # n_folders = len(folders)
     print("Number of folders: {}".format(len(folders)))
     for folder in folders:
+        folder = Path(folder)
         for file in folder.glob(file_pattern):
             n += 1
 
