@@ -226,7 +226,7 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
             outfile = outpath / filename
 
         # Copy the file (while attempting to keep metadata)
-        shutil.copy2(file, outfile)
+        shutil.copy2(str(file), str(outfile))
 
         if n % 1000 == 0:
             # print(f"Handled {n} files for now..")
