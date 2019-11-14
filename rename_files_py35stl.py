@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Rename files such that timestamps are in UTC and sort correctly."""
 import os
+import glob
 import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -172,6 +173,9 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
     # for file in path_in.rglob(file_pattern):
     # Fails in NAS because of ../incoming_data/#recycle/.. folders!
     folders = sorted(path_in.glob(folder_pattern),
+                     key=os.path.getmtime)  # , reverse=True)
+    # Akh os doesn't take pathlib Paths in Python 3.5..
+    folders = sorted(glob.iglob(str(path_in) + '/' + folder_pattern),
                      key=os.path.getmtime)  # , reverse=True)
     # n_folders = len(folders)
     print("Number of folders: {}").format(len(folders))
