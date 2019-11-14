@@ -181,9 +181,12 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
     print("Number of folders: {}".format(len(folders)))
     for folder in folders:
         # folder = Path(folder)
+        print("Processing folder '{}'".format(folder))
 
         files = sorted(glob.iglob(str(folder) + '/' + file_pattern),
                        key=os.path.getmtime)  # , reverse=True)
+        print("Folder contains {} matching files".format(len(files)))
+
         for file in files:
             file = Path(file)
             n += 1
