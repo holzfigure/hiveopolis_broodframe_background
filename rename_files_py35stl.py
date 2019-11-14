@@ -233,7 +233,7 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
 
                 # Get name of the output file
                 # outfile = outfolder / f"hive1_rpi{rpi}_{t_str}.jpg"
-                outfile = outfolder / "hive{}_rpi{}_{}.jpg".format(
+                outfile = outfolder / "raw_hive{}_rpi{}_{}.jpg".format(
                     hive, rpi, t_str)
 
             else:
