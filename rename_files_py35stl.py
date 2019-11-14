@@ -170,11 +170,11 @@ def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
     """Iterate over all broodnest photos and rename them."""
     # Iterate over all images
     n = 0
-    # for file in path_in.rglob(file_pattern):
-    # Fails in NAS because of ../incoming_data/#recycle/.. folders!
-    folders = sorted(path_in.glob(folder_pattern),
-                     key=os.path.getmtime)  # , reverse=True)
-    # Akh os doesn't take pathlib Paths in Python 3.5..
+    # # for file in path_in.rglob(file_pattern):
+    # # Fails in NAS because of ../incoming_data/#recycle/.. folders!
+    # folders = sorted(path_in.glob(folder_pattern),
+    #                  key=os.path.getmtime)  # , reverse=True)
+    # # Akh os doesn't take pathlib Paths in Python 3.5..
     folders = sorted(glob.iglob(str(path_in) + '/' + folder_pattern),
                      key=os.path.getmtime)  # , reverse=True)
     # n_folders = len(folders)
