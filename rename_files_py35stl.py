@@ -20,6 +20,11 @@ PATH_OUT = Path(
     "/media/holzfigure/Data/local_stuff/Hiveopolis/"
     "broodnests/new_scheme"
 )
+PATH_ERR = Path(
+    "/media/holzfigure/Data/local_stuff/Hiveopolis/"
+    "broodnests/new_scheme/DST_troubles"
+)
+
 
 # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
 INFILE_PATTERN = "pi*_hive*broodn_*.jpg"
@@ -156,7 +161,7 @@ def get_utc_timestrings(fn, year=YEAR,  # local_tz=LOCAL_TZ,
     return t_str, day_str
 
 
-def main(path_in=PATH_IN, path_out=PATH_OUT,
+def main(path_in=PATH_IN, path_out=PATH_OUT, path_err=PATH_ERR,
          file_pattern=INFILE_PATTERN):
     """Iterate over all broodnest photos and rename them."""
     # Iterate over all images
@@ -192,7 +197,7 @@ def main(path_in=PATH_IN, path_out=PATH_OUT,
             # outfolder = (path_out / f"rpi{rpi_num}" /
             #              f"hive1_rpi{rpi_num}_{day_str}")
             outfolder = (
-                    path_out / ("rpi" + str(rpi)) /
+                    path_out / ("hive" + str(hive)) / ("rpi" + str(rpi)) /
                     "hive{}_rpi{}_{}".format(hive, rpi, day_str)
             )
 
@@ -206,6 +211,17 @@ def main(path_in=PATH_IN, path_out=PATH_OUT,
             # outfile = outfolder / f"hive1_rpi{rpi}_{t_str}.jpg"
             outfile = outfolder / "hive{}_rpi{}_{}.jpg".format(
                 hive, rpi, t_str)
+
+        else:
+            print(
+                "ERROR: Found file possibly in DST-transition: "
+                "{}".format(file)
+            )
+            outpath = path_err / file.parent.name
+            if not outpath.is_dir():
+                outpath.mkdir(parents=True)
+                print("Created folder '{}'".format(outpath))
+            outfile = outpath / filename
 
         # Copy the file (while attempting to keep metadata)
         shutil.copy2(file, outfile)
