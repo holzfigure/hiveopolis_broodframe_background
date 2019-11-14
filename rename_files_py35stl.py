@@ -185,8 +185,8 @@ def main(path_in=PATH_IN, path_out=PATH_OUT,
                 print(
                     "WARNING: Changed Hive and RPi numbers: "
                     # f"Filename: {filename}, rpi={rpi}, hive={hive}"
-                    "Filename: {}, rpi={}, hive={hive}".format(
-                        filename, rpi)
+                    "Filename: {}, rpi={}, hive={}".format(
+                        filename, rpi, hive)
                 )
             # Get name of output folder
             # outfolder = (path_out / f"rpi{rpi_num}" /
