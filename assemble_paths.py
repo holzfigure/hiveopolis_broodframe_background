@@ -220,6 +220,9 @@ def convert_paths(paths, times,
     """Take only the relevant relative path and create nice filename.
 
     Assuming that all files stem from the same Hive and RPi.
+
+    Return same-length lists:
+        rel_paths, nice_names, hive_col, rpi_col
     """
     # assert len(paths) == len(times), "Paths and times vary in length!"
     # Parse Hive and RPi

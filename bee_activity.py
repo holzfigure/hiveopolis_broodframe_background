@@ -69,9 +69,10 @@ END_TIME_FMT = "%H%M%S-utc"
 # TIME_TARGET_FMT = "%y%m%d-%H"
 # DAY_FMT = "day-%y%m%d"
 # TIME_INFILE_FMT = "%d_%m_%H_%M_%S.jpg"
-TIME_INFOLDER_FMT = "day-%y%m%d"
 TIME_INFOLDER_TAG = "day-"
+TIME_INFOLDER_FMT = "%y%m%d"
 TIME_INFILE_TAG = "-utc"
+TIME_INFILE_FMT = "%y%m%d-%H%M%S"
 
 # HISTORY = 200  # Number of Photos to look for
 
@@ -199,23 +200,24 @@ def folder_datetime(foldername, time_infolder_fmt=TIME_INFOLDER_FMT):
 
 def file_datetime(
         filename,  # type <str>  # path.name
-        # year=YEAR,
-        local_tz=LOCAL_TZ,
-        # filetag=INFILE_TAG,
-        time_infile_fmt=TIME_FMT,
+        # local_tz=LOCAL_TZ,
+        time_tag=TIME_INFILE_TAG,  # "-utc"
+        time_infile_fmt=TIME_INFILE_FMT,  # "%y%m%d-%H%M%S"
 ):
-    """Parse UTC datetime object from filename."""
+    """Parse UTC datetime object from filename.
+
+    Filename e.g.:  raw_hive1_rpi1_190801-000002-utc.jpg
+    """
     # Extract the timestring from the filename
-    # Filename e.g.:  raw_hive1_rpi1_190801-000002-utc.jpg
-    t_str = filename.split("-utc")[0].split("_")[-1]
+    t_str = filename.split(time_tag)[0].split("_")[-1]
 
     # Parse it into a datetime object
-    dt_naive = datetime.strptime(
-            t_str, time_infile_fmt).replace(year=year)
+    dt_naive = datetime.strptime(t_str, time_infile_fmt)
 
     # # Localize and convert to UTC
     # dt_local = local_tz.localize(dt_naive)
     # dt_utc = dt_local.astimezone(pytz.utc)
+    dt_utc = pytz.utc.localize(dt_naive)
 
     return dt_utc
 
@@ -227,6 +229,9 @@ def convert_paths(paths, times,
     """Take only the relevant relative path and create nice filename.
 
     Assuming that all files stem from the same Hive and RPi.
+
+    Return same-length columns:
+        rel_paths, nice_names, hive_col, rpi_col
     """
     # assert len(paths) == len(times), "Paths and times vary in length!"
     # Parse Hive and RPi
@@ -274,7 +279,7 @@ def convert_paths(paths, times,
 
 def pack_dataframe(dt_targ, times, paths,
                    history=HISTORY,
-                   tol_time=TOLERANCE_TIME_SEC,
+                   tol_time=TOLERANCE_TIME_SEC,  # TOLERANCE_TIMEDELTA
                    ):
     """Export a pandas dataframe to extract background.
     """
@@ -328,55 +333,19 @@ def pack_dataframe(dt_targ, times, paths,
     return df
 
 
-def export_csv(df, dt_targ,
-               path_out=PATH_OUT,
-               time_fmt=TIME_FMT,
-               time_targ_fmt=TIME_TARGET_FMT,
-               prefix=OUTCSV_PREFIX,
-               ):
-    """Write the timestamped filepath array to CSV."""
-    # TODO: Build paths and nice names
-    file = df["path"][-1]
-    time = df.index[-1]
-    # folder = file.parent.name
-    # Foldername e.g.:  Photos_of_Pi1_1_9_2019
-    # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
-    # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-    trunc = file.name.split("broodn")[0]
-    rpi = int(trunc.split("pi")[-1][0])
-    hive = int(trunc.split("hive")[-1][0])
-    logging.debug(f"Filename: {file.name}, rpi={rpi}, hive={hive}")
+def compute_difference(img1, img2, euclid=ARGS.euclid):
+    """Compute difference between two images."""
 
-    # NOTE: Temporary hack to fix wrongly named hive2 files
-    # TODO: REMOVE, especially when "hive2" really exists!
-    if hive == 2:
-        hive = 1
-        rpi = 2
-        logging.warning(f"Changed Hive and RPi numbers: "
-                        f"Filename: {file.name}, rpi={rpi}, hive={hive}")
+    if euclid:
+        diff = np.sqrt(sum(np.power(img1 - img2, 2)))
+    else:
+        diff = sum(np.absolute(img1 - img2))
 
-    targ_str = dt_targ.strftime(time_targ_fmt)
-    time_str = time.strftime(time_fmt)
 
-    # Set up output folder
-    dir_out = path_out / f"csv/hive{hive}/rpi{rpi}"
-    if not dir_out.is_dir():
-        dir_out.mkdir(parents=True)
-        logging.info(f"Created folder '{dir_out}'")
 
-    # Build filename
-    fn = f"{prefix}_hive{hive}_rpi{rpi}_targ{targ_str}_{time_str}.csv"
-    ffn = ioh.safename((dir_out / fn), "file")
+    return diff
 
-    # Export CSV
-    df.to_csv(
-            ffn,
-            # index_label="time",
-            # date_format=time_fmt,
-    )
-    logging.info(f"Exported CSV to {ffn}")
 
-    return None
 
 
 def get_difference_df(
@@ -478,6 +447,57 @@ def get_difference_df(
 
     logging.info(f"Returning {len(times)} files and times")
     return target_dfs
+
+
+def export_csv(df, dt_targ,
+               path_out=PATH_OUT,
+               time_fmt=TIME_FMT,
+               time_targ_fmt=TIME_TARGET_FMT,
+               prefix=OUTCSV_PREFIX,
+               ):
+    """Write the timestamped filepath array to CSV."""
+    # TODO: Build paths and nice names
+    file = df["path"][-1]
+    time = df.index[-1]
+    # folder = file.parent.name
+    # Foldername e.g.:  Photos_of_Pi1_1_9_2019
+    # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
+    # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
+    trunc = file.name.split("broodn")[0]
+    rpi = int(trunc.split("pi")[-1][0])
+    hive = int(trunc.split("hive")[-1][0])
+    logging.debug(f"Filename: {file.name}, rpi={rpi}, hive={hive}")
+
+    # NOTE: Temporary hack to fix wrongly named hive2 files
+    # TODO: REMOVE, especially when "hive2" really exists!
+    if hive == 2:
+        hive = 1
+        rpi = 2
+        logging.warning(f"Changed Hive and RPi numbers: "
+                        f"Filename: {file.name}, rpi={rpi}, hive={hive}")
+
+    targ_str = dt_targ.strftime(time_targ_fmt)
+    time_str = time.strftime(time_fmt)
+
+    # Set up output folder
+    dir_out = path_out / f"csv/hive{hive}/rpi{rpi}"
+    if not dir_out.is_dir():
+        dir_out.mkdir(parents=True)
+        logging.info(f"Created folder '{dir_out}'")
+
+    # Build filename
+    fn = f"{prefix}_hive{hive}_rpi{rpi}_targ{targ_str}_{time_str}.csv"
+    ffn = ioh.safename((dir_out / fn), "file")
+
+    # Export CSV
+    df.to_csv(
+            ffn,
+            # index_label="time",
+            # date_format=time_fmt,
+    )
+    logging.info(f"Exported CSV to {ffn}")
+
+    return None
 
 
 def main(
