@@ -207,7 +207,7 @@ def initialize_io(dir_in=PATH_IN, dir_raw=PATH_RAW, dir_out=PATH_OUT,
     # if args.interactive or not os.path.isdir(dir_out):
     if args.interactive or not dir_out.is_dir():
         dir_out = ioh.select_directory(
-            title="output folder",
+            title="Output folder",
             dir_ini=dir_in)
 
     if not dir_out or not dir_out.is_dir():
@@ -271,7 +271,7 @@ def initialize_io(dir_in=PATH_IN, dir_raw=PATH_RAW, dir_out=PATH_OUT,
     logging.info(f"numpy version: {np.__version__}")
     logging.info(f"pandas version: {pd.__version__}")
     # logging.info(f"networkx version: {nx.__version__}")
-    # logging.info(f"OpenCV version: {cv.__version__}")
+    logging.info(f"OpenCV version: {cv.__version__}")
 
     return dir_in, dir_raw, dir_out
 

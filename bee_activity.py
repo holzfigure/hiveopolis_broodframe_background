@@ -16,15 +16,16 @@ import logging
 import argparse
 import platform
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Third-party libraries
-# import pytz
+import pytz
 import pandas as pd
 import numpy as np
-# open cv, we have to load V3 for full list of algorithms
+# OpenCV, we have to load V3 for full list of algorithms
 # https://docs.opencv.org/3.4
-# import cv2 as cv
+# NOTE: OpenCV 3.2 works on Ubuntu 18.04
+import cv2 as cv
 
 # Own libraries
 import iohelp as ioh
@@ -39,32 +40,40 @@ DEPENDENCIES = [
 # Path to raw files and output folder of generated images
 # PATH_RAW = Path.cwd() / 'img'
 # PATH_OUT = Path.cwd() / 'out'
-PATH_RAW = Path("/media/holzfigure/Data/NAS/NAS_incoming_data")
+PATH_PHOTOS = Path(
+    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
+    "broodnest_obs/hive1")
 PATH_OUT = Path(
     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
-    "broodnest_bgs"
+    "broodnest_activity/csv"
 )
 # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-INFILE_PATTERN = "pi*_hive*broodn_*.jpg"
+INFILE_PATTERN = "raw_hive*_rpi*-utc.jpg"
 # Foldername e.g.:  Photos_of_Pi1_1_9_2019
 # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
-INFOLDER_PATTERN = "Photos_of_Pi*/"
-OUTCSV_PREFIX = "bgx"
+INFOLDER_PATTERN = "hive*_rpi*_day-*/"
+OUTCSV_PREFIX = "act"
 OUTRAW_PREFIX = "raw"
 
 # TIME-RELATED PARAMETERS
-EXPORT_HOURS_UTC = [2, 8, 14, 20]  # must be sorted!
-TOLERANCE_TIME_SEC = 60 * 60  # 1 hour
-YEAR = 2019
-# LOCAL_TZ = pytz.timezone("Etc/UTC")
-LOCAL_TZ = pytz.timezone("Europe/Vienna")
-TIME_FMT = "%y%m%d-%H%M%S-utc"
-TIME_TARGET_FMT = "%y%m%d-%H"
-DAY_FMT = "day-%y%m%d"
-TIME_INFILE_FMT = "%d_%m_%H_%M_%S.jpg"
-TIME_INFOLDER_FMT = "%d_%m_%Y"
+# EXPORT_HOURS_UTC = [2, 8, 14, 20]  # must be sorted!
 
-HISTORY = 200  # Number of Photos to look for
+# Maximal seconds accepted between images:
+TOLERANCE_TIMEDELTA = timedelta(seconds=20)
+
+LOCAL_TZ = pytz.timezone("Etc/UTC")
+# LOCAL_TZ = pytz.timezone("Europe/Vienna")
+TIME_FMT = "%y%m%d-%H%M%S-utc"
+START_TIME_FMT = "%y%m%d-%H%M%S"
+END_TIME_FMT = "%H%M%S-utc"
+# TIME_TARGET_FMT = "%y%m%d-%H"
+# DAY_FMT = "day-%y%m%d"
+# TIME_INFILE_FMT = "%d_%m_%H_%M_%S.jpg"
+TIME_INFOLDER_FMT = "day-%y%m%d"
+TIME_INFOLDER_TAG = "day-"
+TIME_INFILE_TAG = "-utc"
+
+# HISTORY = 200  # Number of Photos to look for
 
 # argument parsing
 parser = argparse.ArgumentParser(
@@ -91,7 +100,7 @@ ARGS = parser.parse_args()
 # del(parser)
 
 
-def initialize_io(dir_in=PATH_RAW, dir_out=PATH_OUT,
+def initialize_io(dir_in=PATH_PHOTOS, dir_out=PATH_OUT,
                   deps=DEPENDENCIES,
                   postfix=POSTFIX, args=ARGS):
     """Set up IO-directories and files and logging."""
@@ -161,12 +170,13 @@ def initialize_io(dir_in=PATH_RAW, dir_out=PATH_OUT,
     #     os_ver = distro.linux_distribution()
 
     # Display versions of used third-party libraries
+    logging.info(f"pytz version: {pytz.__version__}")
     # logging.info("matplotlib version: {}".format(matplotlib.__version__))
     # logging.info(f"matplotlib version: {matplotlib.__version__}")
     logging.info(f"numpy version: {np.__version__}")
     logging.info(f"pandas version: {pd.__version__}")
     # logging.info(f"networkx version: {nx.__version__}")
-    # logging.info(f"OpenCV version: {cv.__version__}")
+    logging.info(f"OpenCV version: {cv.__version__}")
 
     return dir_in, dir_out
 
@@ -174,40 +184,38 @@ def initialize_io(dir_in=PATH_RAW, dir_out=PATH_OUT,
 def folder_datetime(foldername, time_infolder_fmt=TIME_INFOLDER_FMT):
     """Parse UTC datetime from foldername.
 
-    Foldername e.g.:  Photos_of_Pi1_1_9_2019/
-                      Photos_of_Pi2_heating_1_11_2019/
+    Foldername e.g.:  hive1_rpi1_day-190801/
     """
     # t_str = folder.name.split("Photos_of_Pi")[-1][2:]  # heating!!
-    t_str = "_".join(foldername.split("_")[-3:])
+    t_str = foldername.split("day-")[-1]
     day_naive = datetime.strptime(t_str, time_infolder_fmt)
-    # Localize as UTC
+    # # Localize as UTC
     # day_local = local_tz.localize(day_naive)
     # dt_utc = day_local.astimezone(pytz.utc)
-    day = pytz.utc.localize(day_naive)
+    day_utc = pytz.utc.localize(day_naive)
 
-    return day
+    return day_utc
 
 
 def file_datetime(
         filename,  # type <str>  # path.name
-        year=YEAR,
+        # year=YEAR,
         local_tz=LOCAL_TZ,
         # filetag=INFILE_TAG,
-        time_infile_fmt=TIME_INFILE_FMT,
+        time_infile_fmt=TIME_FMT,
 ):
     """Parse UTC datetime object from filename."""
     # Extract the timestring from the filename
-    # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-    t_str = filename.split("broodn_")[-1]
-    # TODO: Make this more robust for full pathlib Path objects?
+    # Filename e.g.:  raw_hive1_rpi1_190801-000002-utc.jpg
+    t_str = filename.split("-utc")[0].split("_")[-1]
 
     # Parse it into a datetime object
     dt_naive = datetime.strptime(
             t_str, time_infile_fmt).replace(year=year)
 
-    # Localize and convert to UTC
-    dt_local = local_tz.localize(dt_naive)
-    dt_utc = dt_local.astimezone(pytz.utc)
+    # # Localize and convert to UTC
+    # dt_local = local_tz.localize(dt_naive)
+    # dt_utc = dt_local.astimezone(pytz.utc)
 
     return dt_utc
 
@@ -269,12 +277,6 @@ def pack_dataframe(dt_targ, times, paths,
                    tol_time=TOLERANCE_TIME_SEC,
                    ):
     """Export a pandas dataframe to extract background.
-
-    TODO: put the proper filenames in the table,
-    TODO: put columns for hive and rpi
-    TODO: put formatted timestring in the table
-    TODO: only put the relative path to the file (including
-          the parent folder)
     """
     dt = times[-1]
     p = paths[-1]
@@ -377,33 +379,59 @@ def export_csv(df, dt_targ,
     return None
 
 
-def get_target_dfs(
+def get_difference_df(
         filelist,
+        last_img_dict,
         day,
         path_out,
-        export_hours=EXPORT_HOURS_UTC,
-        tol_time=TOLERANCE_TIME_SEC,
-        history=HISTORY,
+        # export_hours=EXPORT_HOURS_UTC,
+        tol_td=TOLERANCE_TIMEDELTA,
+        # history=HISTORY,
 ):
-    """Extract the relevant chunks of files with their timestamps.
+    """Compute differences between all images in the folder.
 
-    TODO: put the proper filenames in the table,
-    TODO: put columns for hive and rpi
-    TODO: put formatted timestring in the table
-    TODO: only put the relative path to the file (including
-          the parent folder)
+    Compare the first file to a previous image (last_img), if one
+    is there.
     """
-    target_dfs = []
+
+    # Unpack last_img_dict
+    previous = False
+    if last_img_dict is not None:
+        # previous_day = True
+        last_dt = last_img_dict["time"]
+        # last_img = last_img_dict["img"]
+        # last_path = last_img_dict["path"]
+
+        # Check whether it's close enough to first one here
+        dt0 = file_datetime(filelist[0].name)
+        if dt0 - last_dt < tol_td:
+
+            # Finish unpacking
+            last_img = last_img_dict["img"]
+            last_path = last_img_dict["path"]
+            # Set Boolean True
+            previous = True
+
     # Pick target hour and set up containers
     x = 0
-    dt_targ = day.replace(hour=export_hours[x])
-    times = []
-    paths = []
-    # failures = []
-    for file in filelist:
+    # # dt_targ = day.replace(hour=export_hours[x])
+    # times = []
+    # paths = []
+    # # target_dfs = []
+    # # failures = []
+    for img_path in filelist:
+        # Parse timestamp into UTC datetime
+        dt = file_datetime(img_path.name)
+
+        if previous:
+            # Open img here?
+            # Read file with OpenCV
+            img = cv.imread(str(img_path))
+            diff = compute_difference(last_img, img)
+
+
         try:
-            # Parse timestamp into UTC datetime
-            dt = file_datetime(file.name, year=day.year)
+
             times.append(dt)
             paths.append(file)
 
@@ -455,19 +483,20 @@ def get_target_dfs(
 def main(
     file_pattern=INFILE_PATTERN,
     folder_pattern=INFOLDER_PATTERN,
-    history=HISTORY,
 ):
-    """Extract the background from large amounts of broodnest photos."""
+    """Compute difference between cosecutive images and output CSVs."""
     # Initialize IO-directories and setup logging
-    path_raw, path_out = initialize_io()
+    path_photos, path_out = initialize_io()
 
     # Process all subfolders containing broodnest photos
     # Reverse order to get the newest folders first
-    folders = sorted(path_raw.glob(folder_pattern),
-                     key=os.path.getmtime)  # , reverse=True)
+    folders = sorted(path_photos.glob(folder_pattern))
+    #                  key=os.path.getmtime)  # , reverse=True)
     n_folders = len(folders)
     logging.info(f"Number of folders: {n_folders}")
 
+    # Remember last image location to use with next folder
+    last_img_dict = None
     i = 0
     for folder in folders:
         i += 1
@@ -481,9 +510,17 @@ def main(
         # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
         # array = sorted(glob.iglob(path_raw + '/*.jpg'),
         #                key=os.path.getmtime, reverse=True)
-        filelist = sorted(folder.glob(file_pattern),
-                          key=os.path.getmtime)
+        filelist = sorted(folder.glob(file_pattern))
+        #                   key=os.path.getmtime)
         logging.info(f"Found {len(filelist)} files.")
+
+        # Go through day-folder and compute differences
+        diff_df, last_img_dict = get_difference_df(
+                filelist, last_img_dict, day, path_out
+        )
+
+        # Export CSV
+
 
         target_dfs = get_target_dfs(filelist, day, path_out)
 

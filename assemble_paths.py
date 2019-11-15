@@ -271,11 +271,9 @@ def pack_dataframe(dt_targ, times, paths,
                    ):
     """Export a pandas dataframe to extract background.
 
-    TODO: put the proper filenames in the table,
-    TODO: put columns for hive and rpi
-    TODO: put formatted timestring in the table
-    TODO: only put the relative path to the file (including
-          the parent folder)
+    DataFrame contains the time, the relative path to the
+    original filename (including its parent folder),
+    the Hive and RPi number as well as the desired filename.
     """
     dt = times[-1]
     p = paths[-1]
@@ -388,11 +386,9 @@ def get_target_dfs(
 ):
     """Extract the relevant chunks of files with their timestamps.
 
-    TODO: put the proper filenames in the table,
-    TODO: put columns for hive and rpi
-    TODO: put formatted timestring in the table
-    TODO: only put the relative path to the file (including
-          the parent folder)
+    DataFrame contains the time, the relative path to the
+    original filename (including its parent folder),
+    the Hive and RPi number as well as the desired filename.
     """
     target_dfs = []
     # Pick target hour and set up containers
