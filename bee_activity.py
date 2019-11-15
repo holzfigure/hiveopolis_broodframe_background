@@ -83,6 +83,9 @@ parser.add_argument("-d", "--debug", action="store_true",
                     help="debug mode")
 parser.add_argument("-i", "--interactive", action="store_true",
                     help="popup dialog to select files or folders")
+parser.add_argument("-e", "--euclid", action="store_true",
+                    help=("compute Euclidean distance between images "
+                          "(default: Manhattan distance)"))
 # parser.add_argument("-c", "--copy_imgs", type=int,
 #                     default=N_IMAGE_COPIES,
 #                     help=("save N copies of each plot " +
@@ -336,16 +339,26 @@ def pack_dataframe(dt_targ, times, paths,
 def compute_difference(img1, img2, euclid=ARGS.euclid):
     """Compute difference between two images."""
 
+    # subtract background
+    absdiff = cv.absdiff(img1, img2)
     if euclid:
-        diff = np.sqrt(sum(np.power(img1 - img2, 2)))
+        # Euclidean Distance
+        # diff = np.sqrt(np.sum(np.power(absdiff, 2)))
+        diff = np.sqrt(np.sum(absdiff**2))
     else:
-        diff = sum(np.absolute(img1 - img2))
+        # Manhattan Distance
+        diff = np.sum(absdiff)
 
+    # # If you wanna exort both
+    # d_mans = np.absolute(img1 - img2)
+    # d_euc = np.sqrt(np.sum(np.power(d_mans, 2)))
+    # d_man = np.sum(d_mans)
 
+    # TODO: Normalize by time difference?
+
+    # TODO: Return both distances
 
     return diff
-
-
 
 
 def get_difference_df(
