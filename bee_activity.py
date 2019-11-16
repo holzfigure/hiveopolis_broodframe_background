@@ -10,7 +10,7 @@ Euclidean distance or absolute difference will be implemented.
 """
 
 # Basic libraries
-import os
+# import os
 # import glob
 import logging
 import argparse
@@ -34,8 +34,8 @@ import iohelp as ioh
 POSTFIX = None
 DEPENDENCIES = [
     Path("iohelp.py"),
-    # Path("holzhelp/holzhelp_tk.py"),
-    # Path("holzhelp/holzplot.py"),
+    # Path("iohelp/iohelp_tk.py"),
+    # Path("iohelp/ioplot.py"),
 ]
 # Path to raw files and output folder of generated images
 # PATH_RAW = Path.cwd() / 'img'
@@ -201,6 +201,26 @@ def folder_datetime(foldername, time_infolder_fmt=TIME_INFOLDER_FMT):
     return day_utc
 
 
+# def parse_foldername(foldername, time_infolder_fmt=TIME_INFOLDER_FMT):
+#     """Parse Hive and RPi numbers and UTC datetime from foldername.
+#
+#     Foldername e.g.:  hive1_rpi1_day-190801/
+#     """
+#     hive_str, rpi_str, t_str = foldername.split("_")
+#     hive = int(hive_str[-1])
+#     rpi = int(rpi_str[-1])
+#
+#     # t_str = folder.name.split("Photos_of_Pi")[-1][2:]  # heating!!
+#     # t_str = foldername.split("day-")[-1]
+#     day_naive = datetime.strptime(t_str, time_infolder_fmt)
+#     # # Localize as UTC
+#     # day_local = local_tz.localize(day_naive)
+#     # dt_utc = day_local.astimezone(pytz.utc)
+#     day_utc = pytz.utc.localize(day_naive)
+#
+#     return hive, rpi, day_utc
+
+
 def file_datetime(
         filename,  # type <str>  # path.name
         # local_tz=LOCAL_TZ,
@@ -223,6 +243,21 @@ def file_datetime(
     dt_utc = pytz.utc.localize(dt_naive)
 
     return dt_utc
+
+
+def parse_filename(filename):
+    #                    time_tag=TIME_INFOLDER_TAG,
+    #                    time_fmt=TIME_INFILE_FMT,
+    # ):
+    """Parse Hive and RPi number from filename.
+
+    Filename e.g.:  raw_hive1_rpi1_190801-000002-utc.jpg
+    """
+    prefix, hive_str, rpi_str, t_str = filename.split("_")
+    hive = int(hive_str[-1])
+    rpi = int(rpi_str[-1])
+
+    return hive, rpi
 
 
 def convert_paths(paths, times,
@@ -337,28 +372,96 @@ def pack_dataframe(dt_targ, times, paths,
 
 
 def compute_difference(img1, img2, euclid=ARGS.euclid):
-    """Compute difference between two images."""
+    """Compute difference between two images.
 
-    # subtract background
+    def euclid(img1,img2):
+        absdiff = cv.absdiff(img1, img2).astype(np.float)
+        return np.sqrt(np.sum(absdiff**2))
+
+    def manhattan(img1,img2):
+        return np.sum(cv.absdiff(img1,img2))
+
+    def time_it(img1, img2, n=10):
+        t0=time.time()
+        for i in range(n):
+            diff = euclid(img1, img2)
+        t1=time.time()
+        for i in range(n):
+            diff = manhattan(img1, img2)
+        t2=time.time()
+        print(f"{n} euclid took {t1 - t0} secs, manhatten {t2 - t1}")
+
+    >>> time_it(img1, img2, 1000)
+    1000 euclid took 19.7092 secs, manhatten 2.6678
+
+    >>> 19.7092 / 2.6679
+    7.3875
+
+    euclid takes about 7.5 times as long..
+    """
+    # Get absolute differences for each pixel as UINT8 array
     absdiff = cv.absdiff(img1, img2)
-    if euclid:
-        # Euclidean Distance
-        # diff = np.sqrt(np.sum(np.power(absdiff, 2)))
-        diff = np.sqrt(np.sum(absdiff**2))
-    else:
-        # Manhattan Distance
-        diff = np.sum(absdiff)
+    # if euclid:
+    #     # Euclidean Distance
+    #     # diff = np.sqrt(np.sum(np.power(absdiff, 2)))
+    #     diff = np.sqrt(np.sum(absdiff.astype(np.float)**2))
+    # else:
+    #     # Manhattan Distance
+    #     diff = np.sum(absdiff)
 
-    # # If you wanna exort both
-    # d_mans = np.absolute(img1 - img2)
-    # d_euc = np.sqrt(np.sum(np.power(d_mans, 2)))
-    # d_man = np.sum(d_mans)
+    # Manhattan Distance
+    diff_man = np.sum(absdiff)
+    # Euclidean Distance
+    diff_euc = np.sqrt(np.sum(absdiff.astype(np.float)**2))
 
     # TODO: Normalize by time difference?
-
+    #       No, if you wanna do it, do it later!(?)
     # TODO: Return both distances
 
-    return diff
+    return diff_man, diff_euc
+
+
+def rel_path(path):  # , level=1):
+    """Return relative filepath.
+
+    Folder structure e.g.:
+        ".../hive1/rpi1/hive1_rpi1_day-190801/
+        raw_hive1_rpi1_190801-230001-utc.jpg"
+    """
+    # plist = list(path.parents)
+    # relpath = path.relative_to(path.parents[level])
+    relpath = path.relative_to(path.parent.parent)
+    return relpath
+
+
+def make_row(path1, path2, dt1, dt2, diff_man, diff_euc):
+    """Make a list containing all row info.
+
+    For Hive and RPi number, just add the two columns later.
+
+    header = [...]
+    """
+    # # Get interval duration
+    # td = (dt2 - dt1)
+    # dur = td.total_seconds()
+    # dt_center = dt1 + (td / 2)
+
+    # Shorten paths
+    # # relpath1 = rel_path(path1)
+    # # relpath2 = rel_path(path2)
+    relpath1 = path1.relative_to(path1.parent.parent)
+    relpath2 = path2.relative_to(path2.parent.parent)
+
+    row = [
+        # dt_center, dur,  # Calculate columns later all at once..
+        dt1, dt2,
+        # path1, path2,
+        relpath1, relpath2,
+        diff_man,
+        diff_euc,
+    ]
+
+    return row
 
 
 def get_difference_df(
@@ -375,17 +478,20 @@ def get_difference_df(
     Compare the first file to a previous image (last_img), if one
     is there.
     """
+    file0name = filelist[0].name
+    # NOTE: Assuming all files in folder are from same Hive and RPi
+    hive, rpi = parse_filename(file0name)
 
     # Unpack last_img_dict
     previous = False
     if last_img_dict is not None:
-        # previous_day = True
+
         last_dt = last_img_dict["time"]
         # last_img = last_img_dict["img"]
         # last_path = last_img_dict["path"]
 
         # Check whether it's close enough to first one here
-        dt0 = file_datetime(filelist[0].name)
+        dt0 = file_datetime(file0name)
         if dt0 - last_dt < tol_td:
 
             # Finish unpacking
@@ -405,11 +511,32 @@ def get_difference_df(
         # Parse timestamp into UTC datetime
         dt = file_datetime(img_path.name)
 
+        # Read file with OpenCV
+        img = cv.imread(str(img_path))
+
         if previous:
-            # Open img here?
-            # Read file with OpenCV
-            img = cv.imread(str(img_path))
-            diff = compute_difference(last_img, img)
+            # Check if close enough (in time)
+            if dt - last_dt < tol_td:
+                d_man, d_euc = compute_difference(last_img, img)
+                # df_row = make_row(
+                #     last_path, img_path
+                #     last_dt, dt,
+                #     d_man, d_euc,
+                # )
+
+            else:
+                last_img = img
+                last_dt = dt
+                last_path = img_path
+                # previous = True  # Here true anyway!
+        else:
+            # Copying not necessary, because 'img' is overwritten!
+            # last_img = img.copy()
+            last_img = img
+            last_dt = dt
+            last_path = img_path
+            previous = True
+
 
 
         try:
@@ -553,6 +680,8 @@ def main(
         )
 
         # Export CSV
+        export_csv(diff_df, path_out)
+
 
 
         target_dfs = get_target_dfs(filelist, day, path_out)
