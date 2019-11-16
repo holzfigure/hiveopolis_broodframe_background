@@ -507,6 +507,7 @@ def get_difference_df(
     # paths = []
     # # target_dfs = []
     # # failures = []
+    rows = []
     for img_path in filelist:
         # Parse timestamp into UTC datetime
         dt = file_datetime(img_path.name)
@@ -518,12 +519,12 @@ def get_difference_df(
             # Check if close enough (in time)
             if dt - last_dt < tol_td:
                 d_man, d_euc = compute_difference(last_img, img)
-                # df_row = make_row(
-                #     last_path, img_path
-                #     last_dt, dt,
-                #     d_man, d_euc,
-                # )
-
+                df_row = make_row(
+                    last_path, img_path
+                    last_dt, dt,
+                    d_man, d_euc,
+                )
+                rows.append(df_row)
             else:
                 last_img = img
                 last_dt = dt
@@ -654,6 +655,8 @@ def main(
     #                  key=os.path.getmtime)  # , reverse=True)
     n_folders = len(folders)
     logging.info(f"Number of folders: {n_folders}")
+
+    # TODO: Interactively crop folder list as in make_movie.py
 
     # Remember last image location to use with next folder
     last_img_dict = None
