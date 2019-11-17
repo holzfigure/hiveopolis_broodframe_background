@@ -12,7 +12,6 @@ Euclidean distance or absolute difference will be implemented.
 # Basic libraries
 # import os
 # import glob
-import time
 import logging
 import argparse
 import platform
@@ -73,7 +72,7 @@ END_TIME_FMT = "%H%M%S-utc"
 TIME_INFOLDER_TAG = "day-"
 TIME_INFOLDER_FMT = "%y%m%d"
 TIME_INFILE_TAG = "-utc"
-TIME_INFILE_FMT = "%y%m%d-%H%M%S-utc.jpg"
+TIME_INFILE_FMT = "%y%m%d-%H%M%S"
 
 # HISTORY = 200  # Number of Photos to look for
 
@@ -87,14 +86,13 @@ parser.add_argument("-i", "--interactive", action="store_true",
 parser.add_argument("-e", "--euclid", action="store_true",
                     help=("compute Euclidean distance between images "
                           "(default: Manhattan distance)"))
-parser.add_argument("-f", "--firstidx", type=int,
-                    default=0,
-                    help=("file index from where to start " +
-                          "(default:  %(default)s)"))
-parser.add_argument("--export", action="store_true",
-                    help="export the difference images")
+# parser.add_argument("-c", "--copy_imgs", type=int,
+#                     default=N_IMAGE_COPIES,
+#                     help=("save N copies of each plot " +
+#                           "(default: {})").format(
+#                               N_IMAGE_COPIES))
 # xgroup = parser.add_mutually_exclusive_group()
-# xgroup.add_argument("-", "--windowtime", type=int,
+# xgroup.add_argument("-w", "--windowtime", type=int,
 # parser.add_argument("-w", "--windowtime", nargs="?", type=int,
 #                     const=DEF_TIME_WINDOW_MINUTES,
 #                     default=None,
@@ -187,23 +185,134 @@ def initialize_io(dir_in=PATH_PHOTOS, dir_out=PATH_OUT,
     return dir_in, dir_out
 
 
-def parse_filename(filename, time_fmt=TIME_INFILE_FMT):
+def folder_datetime(foldername, time_infolder_fmt=TIME_INFOLDER_FMT):
+    """Parse UTC datetime from foldername.
+
+    Foldername e.g.:  hive1_rpi1_day-190801/
+    """
+    # t_str = folder.name.split("Photos_of_Pi")[-1][2:]  # heating!!
+    t_str = foldername.split("day-")[-1]
+    day_naive = datetime.strptime(t_str, time_infolder_fmt)
+    # # Localize as UTC
+    # day_local = local_tz.localize(day_naive)
+    # dt_utc = day_local.astimezone(pytz.utc)
+    day_utc = pytz.utc.localize(day_naive)
+
+    return day_utc
+
+
+# def parse_foldername(foldername, time_infolder_fmt=TIME_INFOLDER_FMT):
+#     """Parse Hive and RPi numbers and UTC datetime from foldername.
+#
+#     Foldername e.g.:  hive1_rpi1_day-190801/
+#     """
+#     hive_str, rpi_str, t_str = foldername.split("_")
+#     hive = int(hive_str[-1])
+#     rpi = int(rpi_str[-1])
+#
+#     # t_str = folder.name.split("Photos_of_Pi")[-1][2:]  # heating!!
+#     # t_str = foldername.split("day-")[-1]
+#     day_naive = datetime.strptime(t_str, time_infolder_fmt)
+#     # # Localize as UTC
+#     # day_local = local_tz.localize(day_naive)
+#     # dt_utc = day_local.astimezone(pytz.utc)
+#     day_utc = pytz.utc.localize(day_naive)
+#
+#     return hive, rpi, day_utc
+
+
+def file_datetime(
+        filename,  # type <str>  # path.name
+        # local_tz=LOCAL_TZ,
+        time_tag=TIME_INFILE_TAG,  # "-utc"
+        time_infile_fmt=TIME_INFILE_FMT,  # "%y%m%d-%H%M%S"
+):
+    """Parse UTC datetime object from filename.
+
+    Filename e.g.:  raw_hive1_rpi1_190801-000002-utc.jpg
+    """
+    # Extract the timestring from the filename
+    t_str = filename.split(time_tag)[0].split("_")[-1]
+
+    # Parse it into a datetime object
+    dt_naive = datetime.strptime(t_str, time_infile_fmt)
+
+    # # Localize and convert to UTC
+    # dt_local = local_tz.localize(dt_naive)
+    # dt_utc = dt_local.astimezone(pytz.utc)
+    dt_utc = pytz.utc.localize(dt_naive)
+
+    return dt_utc
+
+
+def parse_filename(filename):
+    #                    time_tag=TIME_INFOLDER_TAG,
+    #                    time_fmt=TIME_INFILE_FMT,
+    # ):
     """Parse Hive and RPi number from filename.
 
     Filename e.g.:  raw_hive1_rpi1_190801-000002-utc.jpg
     """
-    # Split the name up into its "blocks"
     prefix, hive_str, rpi_str, t_str = filename.split("_")
-
-    # Parse Hive and RPi number
     hive = int(hive_str[-1])
     rpi = int(rpi_str[-1])
 
-    # Parse timestring into a datetime object
-    dt_naive = datetime.strptime(t_str, time_infile_fmt)
-    # dt_utc = pytz.utc.localize(dt_naive)
+    return hive, rpi
 
-    return hive, rpi, dt_naive
+
+def convert_paths(paths, times,
+                  time_fmt=TIME_FMT,
+                  prefix=OUTRAW_PREFIX,
+                  ):
+    """Take only the relevant relative path and create nice filename.
+
+    Assuming that all files stem from the same Hive and RPi.
+
+    Return same-length columns:
+        rel_paths, nice_names, hive_col, rpi_col
+    """
+    # assert len(paths) == len(times), "Paths and times vary in length!"
+    # Parse Hive and RPi
+    filename = paths[0].name
+    trunc = filename.split("broodn")[0]
+    rpi = int(trunc.split("pi")[-1][0])
+    hive = int(trunc.split("hive")[-1][0])
+    logging.debug(f"Filename: {filename}, rpi={rpi}, hive={hive}")
+
+    # NOTE: Temporary hack to fix wrongly named hive2 files
+    # TODO: REMOVE, especially when "hive2" really exists!
+    if hive == 2:
+        hive = 1
+        rpi = 2
+        logging.warning(f"Changed Hive and RPi numbers: "
+                        f"Filename: {filename}, rpi={rpi}, hive={hive}")
+
+    fileprefix = f"{prefix}_hive{hive}_rpi{rpi}"
+
+    rel_paths = []
+    nice_names = []
+    for i in range(len(paths)):
+        path = paths[i]
+        time = times[i]
+
+        # Parse relative path
+        rel_path = Path(f"{path.parent.name}/{path.name}")
+        rel_paths.append(rel_path)
+
+        # Create nice filename
+        # # Get name of the output file
+        # outfile = outfolder / f"hive1_rpi{rpi_num}_{t_str}.jpg"
+        name = f"{fileprefix}_{time.strftime(time_fmt)}.jpg"
+        nice_names.append(name)
+
+    logging.debug(f"Relativized {len(rel_paths)} paths and "
+                  f"assembled nice names, e.g. '{name}'")
+
+    # assert all lists are same lengths (new & old)...
+    hive_col = [hive] * len(rel_paths)
+    rpi_col = [rpi] * len(rel_paths)
+
+    return rel_paths, nice_names, hive_col, rpi_col
 
 
 def pack_dataframe(dt_targ, times, paths,
@@ -289,24 +398,9 @@ def compute_difference(img1, img2, euclid=ARGS.euclid):
     7.3875
 
     euclid takes about 7.5 times as long..
-
-    Useful links:
-
-    https://stackoverflow.com/questions/56183201/
-    detect-and-visualize-differences-between-two-images-with-opencv-python/
-    56193442
-
-    https://stackoverflow.com/questions/27035672/
-    cv-extract-differences-between-two-images/27036614#27036614
     """
     # Get absolute differences for each pixel as UINT8 array
-    # TODO: Turn grayscale first?
-    # gray = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
     absdiff = cv.absdiff(img1, img2)
-    # NOTE: Image is still 3 channel BGR
-
-    # TODO: Threshold absdiff to remove JPEG noise?
-
     # if euclid:
     #     # Euclidean Distance
     #     # diff = np.sqrt(np.sum(np.power(absdiff, 2)))
@@ -549,8 +643,7 @@ def export_csv(df, dt_targ,
 
 def main(
     file_pattern=INFILE_PATTERN,
-    # folder_pattern=INFOLDER_PATTERN,
-    tol_td=TOLERANCE_TIMEDELTA,
+    folder_pattern=INFOLDER_PATTERN,
     args=ARGS,
 ):
     """Compute difference between cosecutive images and output CSVs."""
@@ -558,52 +651,11 @@ def main(
     path_photos, path_out = initialize_io()
 
     # Find matching files
-    # NOTE: This can take potentially long
-    #       A folderwise sorting would be much faster
-    t0 = time.time()
     filelist = sorted(path_photos.rglob(file_pattern))
-    dur = time.time() - t0
-
     n_files = len(filelist)
-    logging.info(f"Found {n_files} matching files in '{path_photos}' "
-                 f"(took {dur:.4} seconds)")
+    logging.info(f"Found {n_files} files in '{path_photos}'")
 
-    # Trim list according to given first_idx
-    if args.firstidx is not None:
-        filelist = filelist[args.firstidx:]
-        n_files = len(filelist)
-        logging.info(f"Trimmed filelist to {n_files} files")
 
-    # Log differencing method employed
-    if args_euclid:
-        method = "Euclidean"
-    else:
-        method = "Manhattan"
-    logging.info(f"Computing {method} distance between images")
-
-    # Parse first file
-    file = filelist[0]
-    # c_dir1 = c_file.parent
-    hive, rpi, dt = parse_filename(file.name)
-    # img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
-    img = cv.imread(file)
-    logging.info(f"Beginning with Hive{hive}, RPi{rpi}, "
-                 f"photo '{file}' taken {dt}")
-
-    for i in range(n_files - 1):
-        next_file = filelist[i + 1]
-        next_hive, next_rpi, next_dt = parse_filename(next_file.name)
-        # next_img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
-        next_img = cv.imread(next_file)
-
-        # if (hive == next_hive) and (rpi == next_rpi) and ...
-        if (rpi == next_rpi) and ((dt_next - dt) < tol_td):
-
-            diff = compute_difference(img, next_img)
-
-    # # Build the columns for Hive and Pi number
-    # hive_col = [hive] * len(rel_paths)
-    # rpi_col = [rpi] * len(rel_paths)
 
     # Process all subfolders containing broodnest photos
     # Reverse order to get the newest folders first
@@ -612,6 +664,7 @@ def main(
     n_folders = len(folders)
     logging.info(f"Number of folders: {n_folders}")
 
+    # TODO: Interactively crop folder list as in make_movie.py
 
     # Remember last image location to use with next folder
     last_img_dict = None
