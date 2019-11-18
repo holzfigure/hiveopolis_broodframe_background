@@ -289,7 +289,7 @@ def compute_difference(img1, img2, path_out,
     return diff
 
 
-def export_csv(rows, row_cols, path_out, hive, rpi,
+def export_csv(rows, row_cols, path_out, hive, rpi, method,
                time_fmt=TIME_FMT,
                prefix=OUTCSV_PREFIX,
                ):
@@ -338,7 +338,10 @@ def export_csv(rows, row_cols, path_out, hive, rpi,
     day_str = t0.strftime("%y%m%d")
     t0_str = t0.strftime("%H%M%S")
     t1_str = t1.strftime("%H%M%S")
-    fn = f"{prefix}_hive{hive}_rpi{rpi}_{day_str}_{t0_str}-{t1_str}-utc.csv"
+    fn = (
+        f"{prefix}_hive{hive}_rpi{rpi}_"
+        f"{day_str}_{t0_str}-{t1_str}-utc_{method.lower()}.csv"
+    )
     ffn = ioh.safename((dir_out / fn), "file")
 
     # Export CSV
@@ -439,7 +442,7 @@ def main(
                     if len(rows) > 0:
                         logging.info("Day change, "
                                      f"exporting {len(rows)} rows to CSV")
-                        export_csv(rows, row_cols, path_out, hive, rpi)
+                        export_csv(rows, row_cols, path_out, hive, rpi, method)
                         rows = []
 
             else:
@@ -451,7 +454,7 @@ def main(
                 # Export rows as CSV and empty row list
                 if len(rows) > 0:
                     logging.info(f"Exporting {len(rows)} rows to CSV")
-                    export_csv(rows, row_cols, path_out, hive, rpi)
+                    export_csv(rows, row_cols, path_out, hive, rpi, method)
                     rows = []
 
             if (i + 1) % print_modulus == 0:
@@ -470,7 +473,7 @@ def main(
     finally:
         if len(rows) > 0:
             logging.info(f"Exporting {len(rows)} rows to CSV")
-            export_csv(rows, row_cols, path_out, hive, rpi)
+            export_csv(rows, row_cols, path_out, hive, rpi, method)
 
     # # Build the columns for Hive and Pi number
     # hive_col = [hive] * len(rel_paths)
