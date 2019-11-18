@@ -581,6 +581,15 @@ def main(
         method = "Manhattan"
     logging.info(f"Computing {method} distance between images")
 
+    # Initialize containers
+    row_cols = [
+        "time1", "time2", "activity", "file1", "file2"
+    ]
+    rows = []
+
+    # Begin clocking
+    t0 = time.time()
+
     # Parse first file
     file = filelist[0]
     # c_dir1 = c_file.parent
@@ -596,10 +605,28 @@ def main(
         # next_img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
         next_img = cv.imread(next_file)
 
+        # Check whether next file can be compared to the current file
         # if (hive == next_hive) and (rpi == next_rpi) and ...
         if (rpi == next_rpi) and ((dt_next - dt) < tol_td):
 
             diff = compute_difference(img, next_img)
+
+            # Make row and append
+            # row_cols = ["time1", "time2", "activity", "file1", "file2"]
+            row = [dt, next_dt, diff, file.name, next_file.name]
+            rows.append(row)
+
+            if dt_next.day > dt.day:
+                # Export rows as CSV and empty row list
+                if len(rows) > 0:
+                    logging.info("Day change, exporting CSV")
+                    export_csv(rows, row_cols)
+                    rows = []
+
+        else:
+            # Export rows as CSV and empty row list
+            pass
+
 
     # # Build the columns for Hive and Pi number
     # hive_col = [hive] * len(rel_paths)
