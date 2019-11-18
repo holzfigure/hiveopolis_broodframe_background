@@ -265,7 +265,7 @@ def compute_difference(img1, img2, path_out,
     if export:
         t_str = datetime.utcnow().strftime(time_fmt)
         ffn = path_out / f"diff_{t_str}.png"
-        cv.imwrite(ffn, absdiff)
+        cv.imwrite(str(ffn), absdiff)
 
     # TODO: Threshold absdiff to remove JPEG noise?
 
