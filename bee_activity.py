@@ -438,7 +438,7 @@ def main(
                     # Export rows as CSV and empty row list
                     if len(rows) > 0:
                         logging.info("Day change, "
-                                     f"exporting {len(rows)} to CSV")
+                                     f"exporting {len(rows)} rows to CSV")
                         export_csv(rows, row_cols, path_out, hive, rpi)
                         rows = []
 
