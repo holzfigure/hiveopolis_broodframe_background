@@ -338,35 +338,11 @@ def compute_difference(img1, img2, path_out,
     # paths = paths[time_sort]
 
 
-def export_csv(df, dt_targ,
-               path_out=PATH_OUT,
+def export_csv(rows, row_cols, path_out,
                time_fmt=TIME_FMT,
-               time_targ_fmt=TIME_TARGET_FMT,
                prefix=OUTCSV_PREFIX,
                ):
-    """Write the timestamped filepath array to CSV."""
-    # TODO: Build paths and nice names
-    file = df["path"][-1]
-    time = df.index[-1]
-    # folder = file.parent.name
-    # Foldername e.g.:  Photos_of_Pi1_1_9_2019
-    # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
-    # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-    trunc = file.name.split("broodn")[0]
-    rpi = int(trunc.split("pi")[-1][0])
-    hive = int(trunc.split("hive")[-1][0])
-    logging.debug(f"Filename: {file.name}, rpi={rpi}, hive={hive}")
-
-    # NOTE: Temporary hack to fix wrongly named hive2 files
-    # TODO: REMOVE, especially when "hive2" really exists!
-    if hive == 2:
-        hive = 1
-        rpi = 2
-        logging.warning(f"Changed Hive and RPi numbers: "
-                        f"Filename: {file.name}, rpi={rpi}, hive={hive}")
-
-    targ_str = dt_targ.strftime(time_targ_fmt)
-    time_str = time.strftime(time_fmt)
+    """Write the image difference to CSV."""
 
     # Set up output folder
     dir_out = path_out / f"csv/hive{hive}/rpi{rpi}"
@@ -448,50 +424,56 @@ def main(
     logging.info(f"Beginning with Hive{hive}, RPi{rpi}, "
                  f"photo '{file}' taken {dt}")
 
-    for i in range(n_files - 1):
-        next_file = filelist[i + 1]
-        next_hive, next_rpi, next_dt = parse_filename(next_file.name)
-        # next_img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
-        next_img = cv.imread(str(next_file))
+    try:
+        for i in range(n_files - 1):
+            next_file = filelist[i + 1]
+            next_hive, next_rpi, next_dt = parse_filename(next_file.name)
+            # next_img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
+            next_img = cv.imread(str(next_file))
 
-        # Check whether next file can be compared to the current file
-        # if (hive == next_hive) and (rpi == next_rpi) and ...
-        if (rpi == next_rpi) and ((next_dt - dt) < tol_td):
+            # Check whether next file can be compared to the current file
+            # if (hive == next_hive) and (rpi == next_rpi) and ...
+            if (rpi == next_rpi) and ((next_dt - dt) < tol_td):
 
-            diff = compute_difference(img, next_img, path_diffs)
+                diff = compute_difference(img, next_img, path_diffs)
 
-            # Make row and append
-            # row_cols = ["time1", "time2", "activity", "file1", "file2"]
-            row = [dt, next_dt, diff, file.name, next_file.name]
-            rows.append(row)
+                # Make row and append
+                # row_cols = ["time1", "time2", "activity", "file1", "file2"]
+                row = [dt, next_dt, diff, file.name, next_file.name]
+                rows.append(row)
 
-            if next_dt.day > dt.day:
+                if next_dt.day > dt.day:
+                    # Export rows as CSV and empty row list
+                    if len(rows) > 0:
+                        logging.info("Day change, "
+                                     f"exporting {len(rows)} to CSV")
+                        export_csv(rows, row_cols, path_out)
+                        rows = []
+
+            else:
+                logging.info(
+                    "Photos not comparable: "
+                    f"file1: {file.name}, file2: {next_file.name}, "
+                    "switching to next series"
+                )
                 # Export rows as CSV and empty row list
                 if len(rows) > 0:
-                    logging.info("Day change, "
-                                 f"exporting {len(rows)} to CSV")
+                    logging.info(f"Exporting {len(rows)} rows to CSV")
                     export_csv(rows, row_cols, path_out)
                     rows = []
+                pass
 
-        else:
-            logging.info(
-                "Photos not comparable: "
-                f"file1: {file.name}, file2: {next_file.name}, "
-                "switching to next series"
-            )
-            # Export rows as CSV and empty row list
-            if len(rows) > 0:
-                logging.info(f"Exporting {len(rows)} rows to CSV")
-                export_csv(rows, row_cols)
-                rows = []
-            pass
+            # Reset current photo data
+            file, dt, img = next_file, next_dt, next_img
+            hive, rpi = next_hive, next_rpi
 
-        # Reset current photo data
-        file, dt, img = next_file, next_dt, next_img
-        hive, rpi = next_hive, next_rpi
+    except KeyboardInterrupt:
+        logging.info("Manually interrupted script")
 
-
-
+    finally:
+        if len(rows) > 0:
+            logging.info(f"Exporting {len(rows)} rows to CSV")
+            export_csv(rows, row_cols, path_out)
 
     # # Build the columns for Hive and Pi number
     # hive_col = [hive] * len(rel_paths)
