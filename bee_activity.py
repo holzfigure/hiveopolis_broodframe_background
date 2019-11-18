@@ -56,6 +56,8 @@ INFOLDER_PATTERN = "hive*_rpi*_day-*/"
 OUTCSV_PREFIX = "act"
 OUTRAW_PREFIX = "raw"
 
+PRINT_MODULUS = 1000
+
 # Maximal seconds accepted between images:
 TOLERANCE_TIMEDELTA = timedelta(seconds=20)
 
@@ -195,66 +197,14 @@ def parse_filename(filename, time_fmt=TIME_INFILE_FMT):
     rpi = int(rpi_str[-1])
 
     # Parse timestring into a datetime object
-    dt_naive = datetime.strptime(t_str, time_infile_fmt)
-    # dt_utc = pytz.utc.localize(dt_naive)
+    dt_naive = datetime.strptime(t_str, time_fmt)
+    dt_utc = pytz.utc.localize(dt_naive)
 
-    return hive, rpi, dt_naive
+    # Get datetime object of the day at midnight
+    dt_day = dt_utc.replace(
+            hour=0, minute=0, second=0, microsecond=0)
 
-
-def pack_dataframe(dt_targ, times, paths,
-                   history=HISTORY,
-                   tol_time=TOLERANCE_TIME_SEC,  # TOLERANCE_TIMEDELTA
-                   ):
-    """Export a pandas dataframe to extract background.
-    """
-    dt = times[-1]
-    p = paths[-1]
-    logging.info(
-        f"Received {len(times)} timestamped files. "
-        f"Target: {dt_targ}, current time: {dt}, "
-        f"current file: {p.parent.name}/{p.name}"
-    )
-
-    # Check whether found time is close enough to target
-    delta_t = (dt - dt_targ).total_seconds()
-    if abs(delta_t) < tol_time:
-        # Truncate lists to history-size
-        if (len(times) >= history) and (len(paths) >= history):
-
-            # Keep the last "history" elements
-            times = times[-history:]
-            paths = paths[-history:]
-
-            paths, names, hives, rpis = convert_paths(paths, times)
-
-            # Assemble the data in a pandas dataframe
-            # pd.DataFrame({'time': times, 'path': paths})
-            # pd.DataFrame(np.array([times, paths]).T,
-            #              columns=["time", "path"])
-            df = pd.DataFrame(
-                index=times,
-                data=np.array([hives, rpis, paths, names]).T,
-                columns=["hive", "rpi", "path", "name"],
-            )
-            df.index.name = "time"
-            df.sort_index(inplace=True)
-            logging.info(
-                f"Successfully built dataframe of shape {df.shape}"
-            )
-        else:
-            logging.error(
-                f"Found only {len(times)} of {history} "
-                f"required photos. Skipping target '{dt_targ}'!"
-            )
-            df = None
-    else:
-        logging.error(
-            f"Found time {dt} is too far from target '{dt_targ}': "
-            f"abs({delta_t}) > {tol_time} seconds. Skipping target!"
-        )
-        df = None
-
-    return df
+    return hive, rpi, dt_utc, dt_day
 
 
 def compute_difference(img1, img2, path_out,
@@ -332,12 +282,6 @@ def compute_difference(img1, img2, path_out,
     return diff
 
 
-    # # Sort by time
-    # time_sort = np.argsort(times)
-    # times = times[time_sort]
-    # paths = paths[time_sort]
-
-
 def export_csv(rows, row_cols, path_out, hive, rpi,
                time_fmt=TIME_FMT,
                prefix=OUTCSV_PREFIX,
@@ -396,7 +340,7 @@ def export_csv(rows, row_cols, path_out, hive, rpi,
             # index_label="time",
             # date_format=time_fmt,
     )
-    logging.info(f"Exported CSV to {ffn}")
+    logging.info(f"Exported df shaped {df.shape} to {ffn}")
 
     return None
 
@@ -405,6 +349,7 @@ def main(
     file_pattern=INFILE_PATTERN,
     # folder_pattern=INFOLDER_PATTERN,
     tol_td=TOLERANCE_TIMEDELTA,
+    print_modulus=PRINT_MODULUS,
     args=ARGS,
 ):
     """Compute difference between cosecutive images and output CSVs."""
@@ -454,7 +399,7 @@ def main(
     # Parse first file
     file = filelist[0]
     # c_dir1 = c_file.parent
-    hive, rpi, dt = parse_filename(file.name)
+    hive, rpi, dt, day = parse_filename(file.name)
     # img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
     img = cv.imread(str(file))
     logging.info(f"Beginning with Hive{hive}, RPi{rpi}, "
@@ -463,7 +408,8 @@ def main(
     try:
         for i in range(n_files - 1):
             next_file = filelist[i + 1]
-            next_hive, next_rpi, next_dt = parse_filename(next_file.name)
+            next_hive, next_rpi, next_dt, next_day = parse_filename(
+                    next_file.name)
             # next_img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
             next_img = cv.imread(str(next_file))
 
@@ -478,12 +424,13 @@ def main(
                 row = [dt, next_dt, diff, file.name, next_file.name]
                 rows.append(row)
 
-                if next_dt.day > dt.day:
+                # if next_dt.day > dt.day:
+                if next_day > day:
                     # Export rows as CSV and empty row list
                     if len(rows) > 0:
                         logging.info("Day change, "
                                      f"exporting {len(rows)} to CSV")
-                        export_csv(rows, row_cols, path_out)
+                        export_csv(rows, row_cols, path_out, hive, rpi)
                         rows = []
 
             else:
@@ -497,7 +444,11 @@ def main(
                     logging.info(f"Exporting {len(rows)} rows to CSV")
                     export_csv(rows, row_cols, path_out, hive, rpi)
                     rows = []
-                pass
+
+            if i % print_modulus == 0:
+                logging.info(f"{i + 1}/{n_files} "
+                             f"({100 * (i + 1) / n_files:.3}%) in "
+                             f"{time.time() - t0:.3} seconds.")
 
             # Reset current photo data
             file, dt, img = next_file, next_dt, next_img
@@ -509,7 +460,7 @@ def main(
     finally:
         if len(rows) > 0:
             logging.info(f"Exporting {len(rows)} rows to CSV")
-            export_csv(rows, row_cols, path_out)
+            export_csv(rows, row_cols, path_out, hive, rpi)
 
     # # Build the columns for Hive and Pi number
     # hive_col = [hive] * len(rel_paths)
