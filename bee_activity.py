@@ -338,11 +338,44 @@ def compute_difference(img1, img2, path_out,
     # paths = paths[time_sort]
 
 
-def export_csv(rows, row_cols, path_out,
+def export_csv(rows, row_cols, path_out, hive, rpi,
                time_fmt=TIME_FMT,
                prefix=OUTCSV_PREFIX,
                ):
-    """Write the image difference to CSV."""
+    """Write the image difference to CSV.
+
+    row_cols = [
+        "time1", "time2", "activity", "file1", "file2"
+    ]
+    """
+    # Initial DataFrame
+    df = pd.DataFrame(rows, columns=row_cols)
+
+    # Derived columns (duration, central time)
+    dur_td = df["time2"] - df["time1"]
+    time_c = df["time1"] + (dur_td / 2)
+    dur_s = dur_td.dt.total_seconds()
+    # Add to DataFrame
+    df["time_central"] = time_c
+    df["duration"] = dur_s
+
+    # Reshape the array
+    df.set_index("time_central", drop=True, inplace=True)
+    df = df[["duration", "activity", "time1", "time2", "file1", "file2"]]
+
+    # Parse first and last times
+    t0 = df["time1"].iloc[0]
+    t1 = df["time2"].iloc[-1]
+    # Check whether the last image was from the next day
+    tx = (
+            t0.replace(hour=0, minute=0, second=0, microsecond=0) +
+            timedelta(days=1)
+    )
+    if t1 >= tx:
+        t1 = (
+                t1.replace(hour=23, minute=59, second=59, microsecond=0) -
+                timedelta(days=1)
+        )
 
     # Set up output folder
     dir_out = path_out / f"csv/hive{hive}/rpi{rpi}"
@@ -351,7 +384,10 @@ def export_csv(rows, row_cols, path_out,
         logging.info(f"Created folder '{dir_out}'")
 
     # Build filename
-    fn = f"{prefix}_hive{hive}_rpi{rpi}_targ{targ_str}_{time_str}.csv"
+    day_str = t0.strftime("%y%m%d")
+    t0_str = t0.strftime("%H%M%S")
+    t1_str = t1.strftime("%H%M%S")
+    fn = f"{prefix}_hive{hive}_rpi{rpi}_{day_str}_{t0_str}-{t1_str}-utc.csv"
     ffn = ioh.safename((dir_out / fn), "file")
 
     # Export CSV
@@ -459,7 +495,7 @@ def main(
                 # Export rows as CSV and empty row list
                 if len(rows) > 0:
                     logging.info(f"Exporting {len(rows)} rows to CSV")
-                    export_csv(rows, row_cols, path_out)
+                    export_csv(rows, row_cols, path_out, hive, rpi)
                     rows = []
                 pass
 
