@@ -63,7 +63,7 @@ INFOLDER_PATTERN = "hive*_rpi*_day-*/"
 OUTCSV_PREFIX = "act"
 OUTRAW_PREFIX = "raw"
 
-PRINT_MODULUS = 10
+PRINT_MODULUS = 1000
 
 # Maximal seconds accepted between images:
 TOLERANCE_TIMEDELTA = timedelta(seconds=20)
