@@ -56,9 +56,6 @@ INFOLDER_PATTERN = "hive*_rpi*_day-*/"
 OUTCSV_PREFIX = "act"
 OUTRAW_PREFIX = "raw"
 
-# TIME-RELATED PARAMETERS
-# EXPORT_HOURS_UTC = [2, 8, 14, 20]  # must be sorted!
-
 # Maximal seconds accepted between images:
 TOLERANCE_TIMEDELTA = timedelta(seconds=20)
 
@@ -74,8 +71,6 @@ TIME_INFOLDER_TAG = "day-"
 TIME_INFOLDER_FMT = "%y%m%d"
 TIME_INFILE_TAG = "-utc"
 TIME_INFILE_FMT = "%y%m%d-%H%M%S-utc.jpg"
-
-# HISTORY = 200  # Number of Photos to look for
 
 # argument parsing
 parser = argparse.ArgumentParser(
@@ -262,7 +257,11 @@ def pack_dataframe(dt_targ, times, paths,
     return df
 
 
-def compute_difference(img1, img2, euclid=ARGS.euclid):
+def compute_difference(img1, img2, path_out,
+                       euclid=ARGS.euclid,
+                       export=ARGS.export,
+                       time_fmt=TIME_FMT,
+                       ):
     """Compute difference between two images.
 
     def euclid(img1,img2):
@@ -301,199 +300,42 @@ def compute_difference(img1, img2, euclid=ARGS.euclid):
     """
     # Get absolute differences for each pixel as UINT8 array
     # TODO: Turn grayscale first?
-    # gray = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
+    #       No! Then read them in as grayscale in the first place!
+    # gray1 = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
     absdiff = cv.absdiff(img1, img2)
     # NOTE: Image is still 3 channel BGR
 
+    if export:
+        t_str = datetime.utcnow().strftime(time_fmt)
+        ffn = path_out / f"diff_{t_str}.png"
+        cv.imwrite(ffn)
+
     # TODO: Threshold absdiff to remove JPEG noise?
 
-    # if euclid:
-    #     # Euclidean Distance
-    #     # diff = np.sqrt(np.sum(np.power(absdiff, 2)))
-    #     diff = np.sqrt(np.sum(absdiff.astype(np.float)**2))
-    # else:
-    #     # Manhattan Distance
-    #     diff = np.sum(absdiff)
-
-    # Manhattan Distance
-    diff_man = np.sum(absdiff)
-    # Euclidean Distance
-    diff_euc = np.sqrt(np.sum(absdiff.astype(np.float)**2))
+    if euclid:
+        # Euclidean Distance
+        # diff = np.sqrt(np.sum(np.power(absdiff, 2)))
+        diff = np.sqrt(np.sum(absdiff.astype(np.float)**2))
+    else:
+        # Manhattan Distance
+        diff = np.sum(absdiff)
+    #
+    # # Manhattan Distance
+    # diff_man = np.sum(absdiff)
+    # # Euclidean Distance
+    # diff_euc = np.sqrt(np.sum(absdiff.astype(np.float)**2))
 
     # TODO: Normalize by time difference?
     #       No, if you wanna do it, do it later!(?)
     # TODO: Return both distances
 
-    return diff_man, diff_euc
+    return diff
 
 
-def rel_path(path):  # , level=1):
-    """Return relative filepath.
-
-    Folder structure e.g.:
-        ".../hive1/rpi1/hive1_rpi1_day-190801/
-        raw_hive1_rpi1_190801-230001-utc.jpg"
-    """
-    # plist = list(path.parents)
-    # relpath = path.relative_to(path.parents[level])
-    relpath = path.relative_to(path.parent.parent)
-    return relpath
-
-
-def make_row(path1, path2, dt1, dt2, diff_man, diff_euc):
-    """Make a list containing all row info.
-
-    For Hive and RPi number, just add the two columns later.
-
-    header = [...]
-    """
-    # # Get interval duration
-    # td = (dt2 - dt1)
-    # dur = td.total_seconds()
-    # dt_center = dt1 + (td / 2)
-
-    # Shorten paths
-    # # relpath1 = rel_path(path1)
-    # # relpath2 = rel_path(path2)
-    relpath1 = path1.relative_to(path1.parent.parent)
-    relpath2 = path2.relative_to(path2.parent.parent)
-
-    row = [
-        # dt_center, dur,  # Calculate columns later all at once..
-        dt1, dt2,
-        # path1, path2,
-        relpath1, relpath2,
-        diff_man,
-        diff_euc,
-    ]
-
-    return row
-
-
-def get_difference_df(
-        filelist,
-        last_img_dict,
-        day,
-        path_out,
-        # export_hours=EXPORT_HOURS_UTC,
-        tol_td=TOLERANCE_TIMEDELTA,
-        # history=HISTORY,
-):
-    """Compute differences between all images in the folder.
-
-    Compare the first file to a previous image (last_img), if one
-    is there.
-    """
-    file0name = filelist[0].name
-    # NOTE: Assuming all files in folder are from same Hive and RPi
-    hive, rpi = parse_filename(file0name)
-
-    # Unpack last_img_dict
-    previous = False
-    if last_img_dict is not None:
-
-        last_dt = last_img_dict["time"]
-        # last_img = last_img_dict["img"]
-        # last_path = last_img_dict["path"]
-
-        # Check whether it's close enough to first one here
-        dt0 = file_datetime(file0name)
-        if dt0 - last_dt < tol_td:
-
-            # Finish unpacking
-            last_img = last_img_dict["img"]
-            last_path = last_img_dict["path"]
-            # Set Boolean True
-            previous = True
-
-    # Pick target hour and set up containers
-    x = 0
-    # # dt_targ = day.replace(hour=export_hours[x])
-    # times = []
-    # paths = []
-    # # target_dfs = []
-    # # failures = []
-    rows = []
-    for img_path in filelist:
-        # Parse timestamp into UTC datetime
-        dt = file_datetime(img_path.name)
-
-        # Read file with OpenCV
-        img = cv.imread(str(img_path))
-
-        if previous:
-            # Check if close enough (in time)
-            if dt - last_dt < tol_td:
-                d_man, d_euc = compute_difference(last_img, img)
-                df_row = make_row(
-                    last_path, img_path
-                    last_dt, dt,
-                    d_man, d_euc,
-                )
-                rows.append(df_row)
-            else:
-                last_img = img
-                last_dt = dt
-                last_path = img_path
-                # previous = True  # Here true anyway!
-        else:
-            # Copying not necessary, because 'img' is overwritten!
-            # last_img = img.copy()
-            last_img = img
-            last_dt = dt
-            last_path = img_path
-            previous = True
-
-
-
-        try:
-
-            times.append(dt)
-            paths.append(file)
-
-            # Check if one of the target hours has been reached
-            if dt >= dt_targ:
-                # Target hour reached
-
-                # Attempt building target_df
-                df = pack_dataframe(dt_targ, times, paths)
-                if df is not None:
-                    target_dfs.append(df)
-                    # Export CSV of the timestamped filepaths
-                    export_csv(df, dt_targ, path_out)
-                else:
-                    logging.error(f"Skipped target '{dt_targ}'")
-
-                # Reset containers and switch to next target hour
-                if x < len(export_hours) - 1:
-                    x += 1
-                    dt_targ = day.replace(hour=export_hours[x])
-                    times = []
-                    paths = []
-                else:
-                    # Leave loop when last target hour has been reached
-                    break
-
-        except Exception as err:
-            # TODO: Put the proper exception here!
-            logging.error("Couldn't parse time of file " +
-                          f"'{file}': {err}")
-            # failures.append(file)
-
-    # Check whether last target was reached, else try with last file
-    #
-    # # Convert to numpy arrays
-    # # np.array(timestamps).astype("datetime64")
-    # times = np.array(times)
-    # paths = np.array(paths)
-    #
     # # Sort by time
     # time_sort = np.argsort(times)
     # times = times[time_sort]
     # paths = paths[time_sort]
-
-    logging.info(f"Returning {len(times)} files and times")
-    return target_dfs
 
 
 def export_csv(df, dt_targ,
@@ -557,6 +399,13 @@ def main(
     # Initialize IO-directories and setup logging
     path_photos, path_out = initialize_io()
 
+    path_diffs = path_out / "diff_imgs"
+    if args.export:
+        # Folder not needed otherwise, but variable needs to be passed
+        if not path_diffs.is_dir():
+            path_diffs.mkdir()
+            logging.info(f"Created folder '{path_diffs}'")
+
     # Find matching files
     # NOTE: This can take potentially long
     #       A folderwise sorting would be much faster
@@ -575,7 +424,7 @@ def main(
         logging.info(f"Trimmed filelist to {n_files} files")
 
     # Log differencing method employed
-    if args_euclid:
+    if args.euclid:
         method = "Euclidean"
     else:
         method = "Manhattan"
@@ -595,7 +444,7 @@ def main(
     # c_dir1 = c_file.parent
     hive, rpi, dt = parse_filename(file.name)
     # img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
-    img = cv.imread(file)
+    img = cv.imread(str(file))
     logging.info(f"Beginning with Hive{hive}, RPi{rpi}, "
                  f"photo '{file}' taken {dt}")
 
@@ -603,109 +452,50 @@ def main(
         next_file = filelist[i + 1]
         next_hive, next_rpi, next_dt = parse_filename(next_file.name)
         # next_img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
-        next_img = cv.imread(next_file)
+        next_img = cv.imread(str(next_file))
 
         # Check whether next file can be compared to the current file
         # if (hive == next_hive) and (rpi == next_rpi) and ...
-        if (rpi == next_rpi) and ((dt_next - dt) < tol_td):
+        if (rpi == next_rpi) and ((next_dt - dt) < tol_td):
 
-            diff = compute_difference(img, next_img)
+            diff = compute_difference(img, next_img, path_diffs)
 
             # Make row and append
             # row_cols = ["time1", "time2", "activity", "file1", "file2"]
             row = [dt, next_dt, diff, file.name, next_file.name]
             rows.append(row)
 
-            if dt_next.day > dt.day:
+            if next_dt.day > dt.day:
                 # Export rows as CSV and empty row list
                 if len(rows) > 0:
-                    logging.info("Day change, exporting CSV")
-                    export_csv(rows, row_cols)
+                    logging.info("Day change, "
+                                 f"exporting {len(rows)} to CSV")
+                    export_csv(rows, row_cols, path_out)
                     rows = []
 
         else:
+            logging.info(
+                "Photos not comparable: "
+                f"file1: {file.name}, file2: {next_file.name}, "
+                "switching to next series"
+            )
             # Export rows as CSV and empty row list
+            if len(rows) > 0:
+                logging.info(f"Exporting {len(rows)} rows to CSV")
+                export_csv(rows, row_cols)
+                rows = []
             pass
+
+        # Reset current photo data
+        file, dt, img = next_file, next_dt, next_img
+        hive, rpi = next_hive, next_rpi
+
+
 
 
     # # Build the columns for Hive and Pi number
     # hive_col = [hive] * len(rel_paths)
     # rpi_col = [rpi] * len(rel_paths)
-
-    # Process all subfolders containing broodnest photos
-    # Reverse order to get the newest folders first
-    folders = sorted(path_photos.glob(folder_pattern))
-    #                  key=os.path.getmtime)  # , reverse=True)
-    n_folders = len(folders)
-    logging.info(f"Number of folders: {n_folders}")
-
-
-    # Remember last image location to use with next folder
-    last_img_dict = None
-    i = 0
-    for folder in folders:
-        i += 1
-        logging.info(f"Processing folder {i}/{n_folders}: '{folder.name}'")
-
-        # Get the day as UTC datetime object
-        # mtime = folder.stat().st_mtime
-        day = folder_datetime(folder.name)
-
-        # Assemble preliminary list of files matching the pattern
-        # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
-        # array = sorted(glob.iglob(path_raw + '/*.jpg'),
-        #                key=os.path.getmtime, reverse=True)
-        filelist = sorted(folder.glob(file_pattern))
-        #                   key=os.path.getmtime)
-        logging.info(f"Found {len(filelist)} files.")
-
-        # Go through day-folder and compute differences
-        diff_df, last_img_dict = get_difference_df(
-                filelist, last_img_dict, day, path_out
-        )
-
-        # Export CSV
-        export_csv(diff_df, path_out)
-
-
-
-        target_dfs = get_target_dfs(filelist, day, path_out)
-
-        # if len(filelist) > history:
-        #     # Get the timestamps and a corresponding filelist
-        #     timestamps, filelist = assemble_timestamps(
-        #             filelist, year=day.year)
-        #
-        #     for hour in export_hours:
-        #
-        #         # Get a target datetime object (i.e. the desired hour)
-        #         dt_target = day.replace(hour=hour)
-        #
-        #         # Compute time-difference to all timestamps
-        #         d_seconds = []
-        #         # TODO: Do this with sth like "apply_func" or so instead?
-        #         for ts in timestamps:
-        #             d_seconds.append((ts - dt_target).total_seconds())
-        #             # d_seconds.append(abs((ts - dt_target).total_seconds()))
-        #         # Take absolute time-diffs
-        #         d_seconds = np.absolute(d_seconds)
-        #
-        #         # Find minimum of absolute deltas
-        #         min_idx = np.argmin(d_seconds)
-        #         abs_delta = d_seconds[min_idx]
-        #
-        #         if (abs_delta < hour_tolerance) and (min_idx > history):
-        #             closest_time = timestamps[min_idx]
-        #             closest_file = filelist[min_idx]
-        #         # Make sure it's meaningful (closer than THRESH..)
-        #
-        #         # Make sure it has a long enough HISTORY..
-        #
-        # else:  # Skip folder
-        #     logging.info(
-        #         f"WARNING: Folder '{folder}' doesn't contain enough data: "
-        #         f"{len(filelist)} files < {history} minimally required."
-        #     )
 
 
 if __name__ == "__main__":
