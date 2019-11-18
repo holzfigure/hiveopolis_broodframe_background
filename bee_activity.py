@@ -41,12 +41,19 @@ DEPENDENCIES = [
 # Path to raw files and output folder of generated images
 # PATH_RAW = Path.cwd() / 'img'
 # PATH_OUT = Path.cwd() / 'out'
+# PATH_PHOTOS = Path(
+#     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
+#     "broodnest_obs/hive1"
+# )
 PATH_PHOTOS = Path(
-    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/"
-    "broodnest_obs/hive1")
+    "/media/holzfigure/Data/local_stuff/Hiveopolis/broodnests/sample_folders"
+)
+# PATH_OUT = Path(
+#     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
+#     "broodnest_activity/csv"
+# )
 PATH_OUT = Path(
-    "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
-    "broodnest_activity/csv"
+    "/media/holzfigure/Data/local_stuff/Hiveopolis/broodnests"
 )
 # Filename e.g.:  pi1_hive1broodn_15_8_0_0_4.jpg
 INFILE_PATTERN = "raw_hive*_rpi*-utc.jpg"
@@ -258,7 +265,7 @@ def compute_difference(img1, img2, path_out,
     if export:
         t_str = datetime.utcnow().strftime(time_fmt)
         ffn = path_out / f"diff_{t_str}.png"
-        cv.imwrite(ffn)
+        cv.imwrite(ffn, absdiff)
 
     # TODO: Threshold absdiff to remove JPEG noise?
 
