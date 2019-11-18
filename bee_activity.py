@@ -63,7 +63,7 @@ INFOLDER_PATTERN = "hive*_rpi*_day-*/"
 OUTCSV_PREFIX = "act"
 OUTRAW_PREFIX = "raw"
 
-PRINT_MODULUS = 1000
+PRINT_MODULUS = 10
 
 # Maximal seconds accepted between images:
 TOLERANCE_TIMEDELTA = timedelta(seconds=20)
@@ -207,11 +207,11 @@ def parse_filename(filename, time_fmt=TIME_INFILE_FMT):
     dt_naive = datetime.strptime(t_str, time_fmt)
     dt_utc = pytz.utc.localize(dt_naive)
 
-    # Get datetime object of the day at midnight
-    dt_day = dt_utc.replace(
-            hour=0, minute=0, second=0, microsecond=0)
+    # # Get datetime object of the day at midnight
+    # dt_day = dt_utc.replace(
+    #         hour=0, minute=0, second=0, microsecond=0)
 
-    return hive, rpi, dt_utc, dt_day
+    return hive, rpi, dt_utc  # , dt_day
 
 
 def compute_difference(img1, img2, path_out,
@@ -406,7 +406,7 @@ def main(
     # Parse first file
     file = filelist[0]
     # c_dir1 = c_file.parent
-    hive, rpi, dt, day = parse_filename(file.name)
+    hive, rpi, dt = parse_filename(file.name)
     # img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
     img = cv.imread(str(file))
     logging.info(f"Beginning with Hive{hive}, RPi{rpi}, "
@@ -415,10 +415,11 @@ def main(
     try:
         for i in range(n_files - 1):
             next_file = filelist[i + 1]
-            next_hive, next_rpi, next_dt, next_day = parse_filename(
+            next_hive, next_rpi, next_dt = parse_filename(
                     next_file.name)
             # next_img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
             next_img = cv.imread(str(next_file))
+            logging.debug(f"Read image {next_file.name}")
 
             # Check whether next file can be compared to the current file
             # if (hive == next_hive) and (rpi == next_rpi) and ...
@@ -431,8 +432,9 @@ def main(
                 row = [dt, next_dt, diff, file.name, next_file.name]
                 rows.append(row)
 
-                # if next_dt.day > dt.day:
-                if next_day > day:
+                # if next_day > day:
+                if next_dt.day != dt.day:
+
                     # Export rows as CSV and empty row list
                     if len(rows) > 0:
                         logging.info("Day change, "
@@ -452,10 +454,11 @@ def main(
                     export_csv(rows, row_cols, path_out, hive, rpi)
                     rows = []
 
-            if i % print_modulus == 0:
+            if (i + 1) % print_modulus == 0:
                 logging.info(f"{i + 1}/{n_files} "
                              f"({100 * (i + 1) / n_files:.3}%) in "
-                             f"{time.time() - t0:.3} seconds.")
+                             f"{(time.time() - t0) / 60.0:.3} minutes "
+                             f"(last file: {next_file.name})")
 
             # Reset current photo data
             file, dt, img = next_file, next_dt, next_img
