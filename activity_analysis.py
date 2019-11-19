@@ -210,6 +210,7 @@ def parse_filename(filename):  # , time_fmt=TIME_INFILE_FMT):
     # Split the name up into its "blocks"
     parts = filename.split("_")
     hive_str, rpi_str = parts[1:3]
+    day_str = parts[3]
     method = parts[5]
 
     # Parse Hive and RPi number
@@ -221,7 +222,21 @@ def parse_filename(filename):  # , time_fmt=TIME_INFILE_FMT):
     # dt_naive = datetime.strptime(t_str, time_fmt)
     # dt_utc = pytz.utc.localize(dt_naive)
 
-    return hive, rpi, method
+    return hive, rpi, method, day_str
+
+
+def vec_dt_replace(series, year=None, month=None, day=None):
+    """Use to cast all data to the same day.
+
+    Do this in order to plot all data into the same 24-hour axis.
+
+    From:
+    https://stackoverflow.com/questions/28888730/pandas-change-day
+    """
+    return pd.to_datetime(
+        {'year': series.dt.year if year is None else year,
+         'month': series.dt.month if month is None else month,
+         'day': series.dt.day if day is None else day})
 
 
 def main(
@@ -252,12 +267,18 @@ def main(
     logging.info(f"Found {n_files} matching files in '{path_in}'")
     #              f"(took {dur:.4} seconds)")
 
-    df_list = []
+    act_list = []
     for csv_path in filelist:
         logging.info(f"Reading '{csv_path.name}'")
 
-        hive, rpi, method = parse_filename(csv_path.name)
+        hive, rpi, method, day_str = parse_filename(csv_path.name)
+        name = f"RPi{rpi}_{day_str}_{method}"
         # Read CSV
+        # header = [
+        #     "time_central", "duration", "activity",
+        #     "time1", "time2",
+        #     "file1", "file2"
+        # ]
         # See https://pandas.pydata.org/pandas-docs/stable/reference/
         # api/pandas.read_csv.html
         # df = pd.read_csv(csv_path, index_col="time", parse_dates=True,
@@ -270,7 +291,16 @@ def main(
                 # converters={"path": my_path_parser}),
         )
 
-        df_list.append(df)
+        act_dict = {name: df["activity"]}
+
+        act_list.append(act_dict)
+
+        fig = plt.figure()
+        df.activity.plot()
+
+        # ffn = ioh.safename(path_out / f"{name}.png", "file")
+        ffn = path_out / f"{name}.png"
+        plot_path = ioh.safesavefig(ffn)
 
     try:
         pass
