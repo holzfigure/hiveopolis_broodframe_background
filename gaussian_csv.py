@@ -544,14 +544,16 @@ def main(file_pattern=INFILE_PATTERN, args=ARGS):
         # Works only with the default pandas time format:
         df = pd.read_csv(csv_path, index_col="time", parse_dates=True,
                          converters={"path": my_path_parser})
+        # See https://pandas.pydata.org/pandas-docs/stable/reference/
+        # api/pandas.read_csv.html
         logging.debug(f"Read in dataframe sized {df.shape}.")
 
-        # Now you don't really need all the fancy CSV-parsing magic..
-        # Call the Gaussian Action xaggly hewe Oida!
-        bg_path = extract_background(df, path_raw, path_out)
+        # Process the files listed in the CSV into a single background
+        # bg_path = extract_background(df, path_raw, path_out)
+        extract_background(df, path_raw, path_out)
 
     logging.info("Done.")
 
 
 if __name__ == "__main__":
-    main()  # (args)
+    main()

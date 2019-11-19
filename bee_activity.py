@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Find relevant broodnest photos for background extraction.
+"""Image differencing on the broodnest photos.
 
 Iterate over all photos and compute the distance between
 consecutive images, output the information as a CSV file
 containing in each row the times and filenames for both images,
 the hive and RPi number and the difference score.
 
-Euclidean distance or absolute difference will be implemented.
+Euclidean distance or absolute difference are implemented.
 """
-
 # Basic libraries
 # import os
 # import glob
@@ -192,7 +191,7 @@ def initialize_io(dir_in=PATH_PHOTOS, dir_out=PATH_OUT,
 
 
 def parse_filename(filename, time_fmt=TIME_INFILE_FMT):
-    """Parse Hive and RPi number from filename.
+    """Parse Hive and RPi number and UTC time from filename.
 
     Filename e.g.:  raw_hive1_rpi1_190801-000002-utc.jpg
     """
@@ -436,7 +435,7 @@ def main(
                 rows.append(row)
 
                 # if next_day > day:
-                if next_dt.day != dt.day:
+                if (next_dt.day != dt.day) or (next_dt.month != dt.month):
 
                     # Export rows as CSV and empty row list
                     if len(rows) > 0:
@@ -475,9 +474,7 @@ def main(
             logging.info(f"Exporting {len(rows)} rows to CSV")
             export_csv(rows, row_cols, path_out, hive, rpi, method)
 
-    # # Build the columns for Hive and Pi number
-    # hive_col = [hive] * len(rel_paths)
-    # rpi_col = [rpi] * len(rel_paths)
+        logging.info("Done.")
 
 
 if __name__ == "__main__":
