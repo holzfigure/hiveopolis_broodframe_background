@@ -245,7 +245,15 @@ def main(
     tol_td=TOLERANCE_TIMEDELTA,
     args=ARGS,
 ):
-    """Read image-difference CSVs into dataframes and make plots."""
+    """Read image-difference CSVs into dataframes and make plots.
+
+    Creates issues..
+
+    INFO: Could not load matplotlib icon: can't use "pyimage10" as
+          iconphoto: not a photo image
+    See:
+    https://github.com/matplotlib/matplotlib/issues/5963
+    """
     # Initialize IO-directories and setup logging
     path_in, path_out = initialize_io()
 
