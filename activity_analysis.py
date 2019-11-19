@@ -69,7 +69,7 @@ PATH_OUT = Path(
     "bee_activity"
 )
 # Filename e.g.: "act_hive1_rpi1_190804_000000-235959-utc_euclidean.csv"
-INFILE_PATTERN = "act_hive*_rpi*-utc*.jpg"
+INFILE_PATTERN = "act_hive*_rpi*-utc*.csv"
 # Foldername e.g.:  Photos_of_Pi1_1_9_2019
 # Foldername e.g.:  Photos_of_Pi1_heating_1_11_2019
 # INFOLDER_PATTERN = "hive*_rpi*_day-*/"
