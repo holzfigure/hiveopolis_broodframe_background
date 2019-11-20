@@ -291,10 +291,11 @@ def hourly_bxpl_single(
 
     # Group data by hour
     # hourly = series.index.map(lambda d: d.hour)
-    hourly = series.groupby(series.index.hour)
+    # hourly = series.groupby(series.index.hour)
+    # logging.debug(f"hourly: {hourly}, list: {list_hourly}")
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
-    hourly.plot(kind="box", ax=ax)
+    series.plot(kind="box", by=series.index.hour, ax=ax)
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}.png"
