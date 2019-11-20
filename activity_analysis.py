@@ -295,7 +295,7 @@ def hourly_bxpl_single(
     # logging.debug(f"hourly: {hourly}, list: {list_hourly}")
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
-    series.plot(kind="box", by=series.index.hour, ax=ax)
+    series.plot(kind="box", ax=ax)
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}.png"
@@ -381,6 +381,8 @@ def main(
                 # converters={"path": my_path_parser}),
         )
 
+        df["hour"] = df.index.hour
+
         act_dict = {name: df["activity"]}
 
         act_list.append(act_dict)
@@ -388,7 +390,7 @@ def main(
         # Plot_single_activity day
         plot_single_activity(df["activity"], name, path_out)
 
-        hourly_bxpl_single(df["activity"], name, path_out)
+        hourly_bxpl_single(df["activity"].set_index(df["hour"]), name, path_out)
 
 
     try:
