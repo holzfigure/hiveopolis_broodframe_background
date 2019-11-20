@@ -91,7 +91,29 @@ TIME_INFOLDER_FMT = "%y%m%d"
 TIME_INFILE_TAG = "-utc"
 TIME_INFILE_FMT = "%y%m%d_%H%M%S-%H%M%S-utc"  # 2nd part is time-span
 
-# argument parsing
+# Plotting Parameters
+# Plot properties
+# RESOLUTION = (19.20, 10.80)
+# RESOLUTION = (7.2, 4.8)
+# RESOLUTION = (9.6, 5.4)
+# RESOLUTION = (16.0, 9.0)
+RESOLUTION = (12.8, 7.2)
+RESOLUTION2 = (10.8, 8.8)
+
+# LINESTYLES = ['-', '--', '-.', ':']
+# COLORMAP_NAME = "gist_ncar"  # "viridis"
+DEF_EXT = "png"
+TITLE_FS = 20
+AXIS_FS = 19
+TICK_FS = 16
+LEGEND_FS = 16
+N_BINS = "auto"
+
+LEVEL_OF_SIGNIFICANCE = 0.05
+DEF_SAMPLING_INTERVAL = 1
+# SAMPLING_INTERVAL = 100  # = 20 seconds (100 values = 0.2 * 5 * 20)
+
+# Argument parsing
 parser = argparse.ArgumentParser(
     description=("Extract the broodnest from colony photos."))
 parser.add_argument("-d", "--debug", action="store_true",
@@ -225,6 +247,64 @@ def parse_filename(filename):  # , time_fmt=TIME_INFILE_FMT):
     return hive, rpi, method, day_str
 
 
+def plot_single_activity(
+        series, name, path_out,
+        title_fs=TITLE_FS,
+        axis_fs=AXIS_FS,
+        tick_fs=TICK_FS,
+        legend_fs=LEGEND_FS,
+        resolution=RESOLUTION,
+        args=ARGS,
+):
+    """Plot a single activity curve and save the image."""
+
+    fig, ax = plt.subplots(figsize=resolution, dpi=100)
+    series.plot(ax=ax)
+
+    # ffn = ioh.safename(path_out / f"{name}.png", "file")
+    ffn = path_out / f"{name.lower()}.png"
+    plot_path = ioh.safesavefig(ffn)
+
+    logging.debug(f"Figure exported to {plot_path}")
+
+    return plot_path
+
+
+def hourly_bxpl_single(
+        series, name, path_out,
+        title_fs=TITLE_FS,
+        axis_fs=AXIS_FS,
+        tick_fs=TICK_FS,
+        legend_fs=LEGEND_FS,
+        resolution=RESOLUTION,
+        args=ARGS,
+):
+    """Plot a single activity curve and save the image.
+
+    series ... datetime-indexed bee activity
+
+    df['date_of_birth'].map(lambda d: d.month).plot(kind='hist')
+
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/
+    visualization.html#visualization-box
+    """
+
+    # Group data by hour
+    # hourly = series.index.map(lambda d: d.hour)
+    hourly = series.groupby(series.index.hour)
+
+    fig, ax = plt.subplots(figsize=resolution, dpi=100)
+    hourly.plot(kind="box", ax=ax)
+
+    # ffn = ioh.safename(path_out / f"{name}.png", "file")
+    ffn = path_out / f"{name.lower()}.png"
+    plot_path = ioh.safesavefig(ffn)
+
+    logging.debug(f"Figure exported to {plot_path}")
+
+    return plot_path
+
+
 def vec_dt_replace(series, year=None, month=None, day=None):
     """Use to cast all data to the same day.
 
@@ -244,6 +324,7 @@ def main(
     # folder_pattern=INFOLDER_PATTERN,
     tol_td=TOLERANCE_TIMEDELTA,
     args=ARGS,
+
 ):
     """Read image-difference CSVs into dataframes and make plots.
 
@@ -303,12 +384,11 @@ def main(
 
         act_list.append(act_dict)
 
-        fig = plt.figure()
-        df.activity.plot()
+        # Plot_single_activity day
+        plot_single_activity(df["activity"], name, path_out)
 
-        # ffn = ioh.safename(path_out / f"{name}.png", "file")
-        ffn = path_out / f"{name}.png"
-        plot_path = ioh.safesavefig(ffn)
+        hourly_bxpl_single(df["activity"], name, path_out)
+
 
     try:
         pass
