@@ -381,8 +381,6 @@ def main(
                 # converters={"path": my_path_parser}),
         )
 
-        df["hour"] = df.index.hour
-
         act_dict = {name: df["activity"]}
 
         act_list.append(act_dict)
@@ -390,7 +388,9 @@ def main(
         # Plot_single_activity day
         plot_single_activity(df["activity"], name, path_out)
 
-        hourly_bxpl_single(df["activity"].set_index(df["hour"]), name, path_out)
+        series = df.activity
+        series.index = series.index.hour
+        hourly_bxpl_single(series, name, path_out)
 
 
     try:
