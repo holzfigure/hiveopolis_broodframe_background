@@ -295,7 +295,8 @@ def hourly_bxpl_single(
     # logging.debug(f"hourly: {hourly}, list: {list_hourly}")
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
-    series.plot(kind="box", ax=ax)
+    # series.plot(kind="box", ax=ax)
+    series.boxplot(by=series.index, ax=ax)
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}.png"
