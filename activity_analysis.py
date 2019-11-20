@@ -271,7 +271,7 @@ def plot_single_activity(
 
 
 def hourly_bxpl_single(
-        series, name, path_out,
+        df, name, path_out,
         title_fs=TITLE_FS,
         axis_fs=AXIS_FS,
         tick_fs=TICK_FS,
@@ -281,7 +281,7 @@ def hourly_bxpl_single(
 ):
     """Plot a single activity curve and save the image.
 
-    series ... datetime-indexed bee activity
+    df ... datetime-indexed bee activity
 
     df['date_of_birth'].map(lambda d: d.month).plot(kind='hist')
 
@@ -296,7 +296,7 @@ def hourly_bxpl_single(
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
     # series.plot(kind="box", ax=ax)
-    series.boxplot(by=series.index, ax=ax)
+    df.boxplot(column="activity", by="hour", ax=ax)
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}.png"
@@ -389,9 +389,10 @@ def main(
         # Plot_single_activity day
         plot_single_activity(df["activity"], name, path_out)
 
-        series = df.activity
-        series.index = series.index.hour
-        hourly_bxpl_single(series, name, path_out)
+        df["hour"] = df.index.hour
+        # series = df.activity
+        # series.index = series.index.hour
+        hourly_bxpl_single(df, name, path_out)
 
 
     try:
