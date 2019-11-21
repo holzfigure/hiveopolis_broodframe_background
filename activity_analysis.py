@@ -298,6 +298,10 @@ def hourly_bxpl_single(
 
     https://pandas.pydata.org/pandas-docs/stable/user_guide/
     visualization.html#visualization-box
+
+    To group by arbitrary time, use pd.TimeGrouper():
+    https://stackoverflow.com/questions/34814606/
+    a-per-hour-histogram-of-datetime-using-pandas/34820891
     """
 
     # Group data by hour
