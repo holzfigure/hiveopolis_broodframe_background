@@ -299,7 +299,7 @@ def hourly_bxpl_single(
     df.boxplot(column="activity", by="hour", ax=ax)
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
-    ffn = path_out / f"{name.lower()}.png"
+    ffn = path_out / f"{name.lower()}_bp.png"
     plot_path = ioh.safesavefig(ffn)
 
     logging.debug(f"Figure exported to {plot_path}")
@@ -358,7 +358,9 @@ def main(
     logging.info(f"Found {n_files} matching files in '{path_in}'")
     #              f"(took {dur:.4} seconds)")
 
-    act_list = []
+    # act_list = []
+    # df_agg = None
+    df_list = []
     for csv_path in filelist:
         logging.info(f"Reading '{csv_path.name}'")
 
@@ -381,19 +383,37 @@ def main(
                 parse_dates=["time_central", "time1", "time2"],
                 # converters={"path": my_path_parser}),
         )
+        df["hour"] = df.index.hour
+        df["hive"] = [hive] * len(df)
+        df["rpi"] = [rpi] * len(df)
+        df["method"] = [method] * len(df)
 
-        act_dict = {name: df["activity"]}
+        # if df_agg is None:
+        #     df_agg = df
+        # else:
+        #     df_agg = pd.concat([df_agg])
+        df_list.append(df)
 
-        act_list.append(act_dict)
+        # act_dict = {name: df["activity"]}
+        #
+        # act_list.append(act_dict)
 
         # Plot_single_activity day
         plot_single_activity(df["activity"], name, path_out)
 
-        df["hour"] = df.index.hour
         # series = df.activity
         # series.index = series.index.hour
         hourly_bxpl_single(df, name, path_out)
 
+    df_agg = pd.concat(df_list)
+
+    name = "aggregated"
+    # Plot_single_activity day
+    plot_single_activity(df_agg["activity"], name, path_out)
+
+    # series = df.activity
+    # series.index = series.index.hour
+    hourly_bxpl_single(df_agg, name, path_out)
 
     try:
         pass
