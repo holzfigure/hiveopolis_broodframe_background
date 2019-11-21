@@ -413,7 +413,12 @@ def main(
 
     # series = df.activity
     # series.index = series.index.hour
-    hourly_bxpl_single(df_agg, name, path_out)
+    name_euc = name + "_euclidean"
+    hourly_bxpl_single(df_agg[df_agg.method == "euclidean"],
+                       name_euc, path_out)
+    name_man = name + "_manhattan"
+    hourly_bxpl_single(df_agg[df_agg.method == "manhattan"],
+                       name_man, path_out)
 
     try:
         pass
