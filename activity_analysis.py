@@ -259,7 +259,12 @@ def plot_single_activity(
     """Plot a single activity curve and save the image."""
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
-    series.plot(ax=ax)
+    series.plot(alpha=0.3, color="blue", style="-", ax=ax)
+
+    series.resample('h').mean().plot(
+            label="mean", style='-', color="black", linewidth=2, ax=ax)
+    series.resample('h').median().plot(
+            label="median", style='-', color="red", linewidth=2, ax=ax)
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}.png"
@@ -279,7 +284,7 @@ def hourly_bxpl_single(
         resolution=RESOLUTION,
         args=ARGS,
 ):
-    """Plot a single activity curve and save the image.
+    """Make a boxplot grouped by hour.
 
     df ... datetime-indexed bee activity
 
