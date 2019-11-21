@@ -259,7 +259,7 @@ def plot_single_activity(
     """Plot a single activity curve and save the image."""
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
-    series.plot(alpha=0.3, color="blue", style="-", ax=ax)
+    series.plot(alpha=0.5, color="blue", style="-", ax=ax)
 
     series.resample('h').mean().plot(
             label="mean", style='-', color="black", linewidth=2, ax=ax)
@@ -413,17 +413,21 @@ def main(
     df_agg = pd.concat(df_list)
 
     name = "aggregated"
+    name_euc = name + "_euclidean"
+    name_man = name + "_manhattan"
+
+    df_agg_euc = df_agg[df_agg.method == "euclidean"]
+    df_agg_man = df_agg[df_agg.method == "manhattan"]
+
     # Plot_single_activity day
-    plot_single_activity(df_agg["activity"], name, path_out)
+    plot_single_activity(df_agg_euc["activity"], name_euc, path_out)
+    plot_single_activity(df_agg_man["activity"], name_man, path_out)
 
     # series = df.activity
     # series.index = series.index.hour
-    name_euc = name + "_euclidean"
-    hourly_bxpl_single(df_agg[df_agg.method == "euclidean"],
-                       name_euc, path_out)
-    name_man = name + "_manhattan"
-    hourly_bxpl_single(df_agg[df_agg.method == "manhattan"],
-                       name_man, path_out)
+
+    hourly_bxpl_single(df_agg_euc, name_euc, path_out)
+    hourly_bxpl_single(df_agg_man, name_man, path_out)
 
     try:
         pass
