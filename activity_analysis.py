@@ -256,7 +256,13 @@ def plot_single_activity(
         resolution=RESOLUTION,
         args=ARGS,
 ):
-    """Plot a single activity curve and save the image."""
+    """Plot a single activity curve and save the image.
+
+    https://jakevdp.github.io/PythonDataScienceHandbook/
+    03.11-working-with-time-series.html
+
+    see also "df.rolling()" and "pd.rolling_mean()"
+    """
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
     series.plot(alpha=0.5, color="blue", style="-", ax=ax)
