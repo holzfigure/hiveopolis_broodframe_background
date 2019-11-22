@@ -26,7 +26,7 @@ import logging
 import argparse
 import platform
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime  # , timedelta
 
 # Third-party libraries
 import pytz
@@ -322,6 +322,25 @@ def hourly_bxpl_single(
     return plot_path
 
 
+def fit_timeseries(xdates, ydata):
+    """Fit sine function via fft or whatever.
+
+    https://stackoverflow.com/questions/51637922/
+    create-a-sine-wave-from-time-series-data-python
+
+    https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/
+    numpy.fft.fft.html#numpy.fft.fft
+
+    https://stackoverflow.com/questions/55912403/
+    predicting-sine-waves-in-python
+
+    https://docs.scipy.org/doc/scipy/reference/generated/
+    scipy.optimize.curve_fit.html
+    """
+
+    pass
+
+
 def vec_dt_replace(series, year=None, month=None, day=None):
     """Use to cast all data to the same day.
 
@@ -341,7 +360,6 @@ def main(
     # folder_pattern=INFOLDER_PATTERN,
     tol_td=TOLERANCE_TIMEDELTA,
     args=ARGS,
-
 ):
     """Read image-difference CSVs into dataframes and make plots.
 
