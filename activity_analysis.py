@@ -92,6 +92,8 @@ TIME_INFILE_TAG = "-utc"
 TIME_INFILE_FMT = "%y%m%d_%H%M%S-%H%M%S-utc"  # 2nd part is time-span
 
 # Plotting Parameters
+# e.g.              147237858
+OUTLIER_THRESHOLD = 180000000  # e.g. 147237858
 # Plot properties
 # RESOLUTION = (19.20, 10.80)
 # RESOLUTION = (7.2, 4.8)
@@ -359,6 +361,7 @@ def main(
     file_pattern=INFILE_PATTERN,
     # folder_pattern=INFOLDER_PATTERN,
     tol_td=TOLERANCE_TIMEDELTA,
+    outlier=OUTLIER_THRESHOLD,
     args=ARGS,
 ):
     """Read image-difference CSVs into dataframes and make plots.
@@ -425,7 +428,6 @@ def main(
         #     df_agg = df
         # else:
         #     df_agg = pd.concat([df_agg])
-        df_list.append(df)
 
         # act_dict = {name: df["activity"]}
         #
@@ -437,6 +439,15 @@ def main(
         # series = df.activity
         # series.index = series.index.hour
         hourly_bxpl_single(df, name, path_out)
+
+        # Remove outliers
+        if any(df.activity >= outlier):
+            logging.warning(
+                f"Found {sum(df.activity >= outlier)} outliers "
+                f"in {csv_path.name}, filtering them out.")
+            df = df[df.activity < outlier]
+
+        df_list.append(df)
 
     df_agg = pd.concat(df_list)
 
