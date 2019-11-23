@@ -441,21 +441,21 @@ def main(
     df_agg = pd.concat(df_list)
 
     name = "aggregated"
-    name_euc = name + "_euclidean"
-    name_man = name + "_manhattan"
+    # name_euc = name + "_euclidean"
+    # name_man = name + "_manhattan"
 
-    df_agg_euc = df_agg[df_agg.method == "euclidean"]
-    df_agg_man = df_agg[df_agg.method == "manhattan"]
+    # df_agg_euc = df_agg[df_agg.method == "euclidean"]
+    # df_agg_man = df_agg[df_agg.method == "manhattan"]
 
     # Plot_single_activity day
-    plot_single_activity(df_agg_euc["activity"], name_euc, path_out)
-    plot_single_activity(df_agg_man["activity"], name_man, path_out)
+    # plot_single_activity(df_agg_euc["activity"], name_euc, path_out)
+    plot_single_activity(df_agg["activity"], name, path_out)
 
     # series = df.activity
     # series.index = series.index.hour
 
-    hourly_bxpl_single(df_agg_euc, name_euc, path_out)
-    hourly_bxpl_single(df_agg_man, name_man, path_out)
+    # hourly_bxpl_single(df_agg_euc, name_euc, path_out)
+    hourly_bxpl_single(df_agg, name, path_out)
 
     try:
         pass
