@@ -384,7 +384,8 @@ def main(
                  f"(took {dur:.4} seconds)")
 
     # Trim list according to given first_idx
-    if args.firstidx is not None:
+    # if args.firstidx is not None:
+    if args.firstidx > 0:
         filelist = filelist[args.firstidx:]
         n_files = len(filelist)
         logging.info(f"Trimmed filelist to {n_files} files")
