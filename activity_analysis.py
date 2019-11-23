@@ -93,7 +93,7 @@ TIME_INFILE_FMT = "%y%m%d_%H%M%S-%H%M%S-utc"  # 2nd part is time-span
 
 # Plotting Parameters
 # e.g.              147237858
-OUTLIER_THRESHOLD = 180000000  # e.g. 147237858
+OUTLIER_THRESHOLD = 165000000  # e.g. 147237858
 # Plot properties
 # RESOLUTION = (19.20, 10.80)
 # RESOLUTION = (7.2, 4.8)
