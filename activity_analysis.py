@@ -38,6 +38,7 @@ import numpy as np
 # import cv2 as cv
 import matplotlib
 from matplotlib import pyplot as plt
+from matplotlib.collections import LineCollection
 
 # Own libraries
 import iohelp as ioh
@@ -255,6 +256,48 @@ def parse_filename(filename):  # , time_fmt=TIME_INFILE_FMT):
     return hive, rpi, method, day_str
 
 
+def multiline(xs, ys, c, ax=None, **kwargs):
+    """Plot lines with different colorings
+
+    Taken from:
+    https://stackoverflow.com/a/50029441/8511824
+
+    Parameters
+    ----------
+    xs : iterable container of x coordinates
+    ys : iterable container of y coordinates
+    c : iterable container of numbers mapped to colormap
+    ax (optional): Axes to plot on.
+    kwargs (optional): passed to LineCollection
+
+    Notes:
+        len(xs) == len(ys) == len(c) is the number of line segments
+        len(xs[i]) == len(ys[i]) is the number of points for
+                      each line (indexed by i)
+
+    Returns
+    -------
+    lc : LineCollection instance.
+    """
+
+    # Find axes
+    ax = plt.gca() if ax is None else ax
+
+    # Create LineCollection
+    segments = [np.column_stack([x, y]) for x, y in zip(xs, ys)]
+    lc = LineCollection(segments, **kwargs)
+
+    # Set coloring of line segments
+    # NOTE: I get an error if I pass c as a list here... not sure why.
+    lc.set_array(np.asarray(c))
+
+    # Add lines to axes and rescale
+    # NOTE: adding a collection doesn't autoscale xlim/ylim
+    ax.add_collection(lc)
+    ax.autoscale()
+    return lc
+
+
 def plot_single_activity(
         series, name, path_out,
         title_fs=TITLE_FS,
@@ -273,7 +316,7 @@ def plot_single_activity(
     """
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
-    series.plot(alpha=0.5, color="blue", style="-", ax=ax)
+    series.plot(alpha=0.3, color="blue", style="-", ax=ax)
 
     # series.resample('h').mean().plot(
     #         label="mean", style='-', color="black", linewidth=2, ax=ax)
@@ -356,11 +399,16 @@ def plot_median_days(
 
     # Plot all curves
     for i in range(n_lines):
+        # NOTE: Using "color" instead of "c" throws an error!
         med_list[i].plot(ax=ax, c=colors[i])
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}_medians.png"
     plot_path = ioh.safesavefig(ffn)
+
+    # Cast all medians to the same day
+
+
 
     logging.debug(f"Figure exported to {plot_path}")
 
