@@ -19,7 +19,7 @@ the hive and RPi number and the difference score.
 Euclidean distance or absolute difference are implemented.
 """
 # Basic libraries
-# import os
+import os
 # import glob
 import time
 import logging
@@ -201,6 +201,12 @@ def initialize_io(dir_in=PATH_CSVS, dir_out=PATH_OUT,
     dir_out = Path(dir_out)
     logging.info(f"input from {dir_in}, output to {dir_out}")
 
+    # Setting up MAX_THREADS for numExpr  (12 on Hiveopolis station in BeeLab)
+    # NOTE: Do only on HO beelab station PC!!
+    # https://buildmedia.readthedocs.org/media/pdf/numexpr/latest/numexpr.pdf
+    # https://numexpr.readthedocs.io/projects/NumExpr3/en/latest/api.html
+    os.environ['NUMEXPR_MAX_THREADS'] = '12'
+
     # Display Python version and system info
     # TODO: Move this into holzhelp when doing overhaul
     logging.info(f"Python {platform.python_version()} " +
@@ -269,9 +275,11 @@ def plot_single_activity(
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
     series.plot(alpha=0.5, color="blue", style="-", ax=ax)
 
-    series.resample('h').mean().plot(
-            label="mean", style='-', color="black", linewidth=2, ax=ax)
-    series.resample('h').median().plot(
+    # series.resample('h').mean().plot(
+    #         label="mean", style='-', color="black", linewidth=2, ax=ax)
+
+    h_median = series.resample('h').median()
+    h_median.plot(
             label="median", style='-', color="red", linewidth=2, ax=ax)
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
@@ -280,7 +288,7 @@ def plot_single_activity(
 
     logging.debug(f"Figure exported to {plot_path}")
 
-    return plot_path
+    return plot_path, h_median
 
 
 def hourly_bxpl_single(
@@ -317,6 +325,38 @@ def hourly_bxpl_single(
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}_bp.png"
+    plot_path = ioh.safesavefig(ffn)
+
+    logging.debug(f"Figure exported to {plot_path}")
+
+    return plot_path
+
+
+def plot_median_days(
+        med_list, name, path_out,
+        title_fs=TITLE_FS,
+        axis_fs=AXIS_FS,
+        tick_fs=TICK_FS,
+        legend_fs=LEGEND_FS,
+        resolution=RESOLUTION,
+        args=ARGS,
+):
+    """Plot all median day curves with color depending on the date."""
+
+    n_lines = len(med_list)
+
+    fig, ax = plt.subplots(figsize=resolution, dpi=100)
+
+    # Get the colors for the lines
+    # TODO: Check for unique days and have the same day consistent..
+    colors = plt.cm.viridis(np.linspace(0, 1, n_lines))
+
+    # Plot all curves
+    for i in range(n_lines):
+        med_list[i].plot(ax=ax, color=colors[i])
+
+    # ffn = ioh.safename(path_out / f"{name}.png", "file")
+    ffn = path_out / f"{name.lower()}_medians.png"
     plot_path = ioh.safesavefig(ffn)
 
     logging.debug(f"Figure exported to {plot_path}")
@@ -397,6 +437,7 @@ def main(
     # act_list = []
     # df_agg = None
     df_list = []
+    med_list = []
     for csv_path in filelist:
         logging.info(f"Reading '{csv_path.name}'")
 
@@ -434,7 +475,7 @@ def main(
         # act_list.append(act_dict)
 
         # Plot_single_activity day
-        plot_single_activity(df["activity"], name, path_out)
+        h_median = plot_single_activity(df["activity"], name, path_out)[1]
 
         # series = df.activity
         # series.index = series.index.hour
@@ -445,9 +486,18 @@ def main(
             logging.warning(
                 f"Found {sum(df.activity >= outlier)} outliers "
                 f"in {csv_path.name}, filtering them out.")
+
+            # Crop df to plausible measurements
             df = df[df.activity < outlier]
 
+            name += "_removed-ols"
+
+            # Plot_single_activity day
+            h_median = plot_single_activity(
+                    df["activity"], name, path_out)[1]
+
         df_list.append(df)
+        med_list.append(h_median)
 
     df_agg = pd.concat(df_list)
 
@@ -467,6 +517,11 @@ def main(
 
     # hourly_bxpl_single(df_agg_euc, name_euc, path_out)
     hourly_bxpl_single(df_agg, name, path_out)
+
+    # Plot all medians
+    plot_median_days(med_list, "median-days", path_out)
+
+    # Plot functional median boxplot
 
     try:
         pass
