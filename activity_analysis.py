@@ -477,17 +477,18 @@ def plot_median_days(
     # mean_date = pd.to_timedelta(datelist).mean()
     # datelist.resample('5Min').
     mean_date = pd.to_datetime(datelist).mean()
-    m_day = mean_date.day
-    m_month = mean_date.month
     m_year = mean_date.year
+    m_month = mean_date.month
+    m_day = mean_date.day
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
 
     # sd_list = []
     for i in range(n_lines):
         h_median = med_list[i]
-        sd_median = pd.to_datetime(h_median.index).dt.replace(
-                year=m_year, month=m_month, day=m_day)
+        # sd_median = pd.to_datetime(h_median.index).dt.replace(
+        #         year=m_year, month=m_month, day=m_day)
+        sd_median = vec_dt_replace(h_median, m_year, m_month, m_day)
 
         # sd_list.append(sd_median)
 
