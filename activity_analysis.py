@@ -325,6 +325,16 @@ def plot_single_activity(
     h_median.plot(
             label="median", style='-', color="red", linewidth=2, ax=ax)
 
+    # if args.legend:
+    #     axes[0].legend(  # ncol=1, # borderaxespad=0.,
+    #         borderaxespad=0.,
+    #         loc="upper right",  # bbox_to_anchor=(1.1, 1.0),
+    #         fontsize=leg_fs,
+    #         fancybox=True, framealpha=0.5)
+    # # plt.legend(ncol=2, borderaxespad=0.)
+    # # fig.suptitle(figtitle, fontsize=title_fs)
+    ax.legend()
+
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}.png"
     plot_path = ioh.safesavefig(ffn)
