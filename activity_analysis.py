@@ -262,6 +262,32 @@ def multiline(xs, ys, c, ax=None, **kwargs):
     Taken from:
     https://stackoverflow.com/a/50029441/8511824
 
+    Example usage:
+
+    xs = [[0, 1], [0, 1, 2]]
+    ys = [[0, 0], [1, 2, 1]]
+    c = [0, 1]
+    lc = multiline(xs, ys, c, cmap='bwr', lw=2)
+
+    Or:
+
+    n_lines = 30
+    x = np.arange(100)
+
+    yint = np.arange(0, n_lines * 10, 10)
+    ys = np.array([x + b for b in yint])
+    xs = np.array([x for i in range(n_lines)])  # could also use np.tile
+
+    colors = np.arange(n_lines)
+
+    fig, ax = plt.subplots()
+    lc = multiline(xs, ys, yint, cmap='bwr', lw=2)
+
+    axcb = fig.colorbar(lc)
+    axcb.set_label('Y-intercept')
+    ax.set_title('Line Collection with mapped colors')
+
+
     Parameters
     ----------
     xs : iterable container of x coordinates
@@ -279,7 +305,6 @@ def multiline(xs, ys, c, ax=None, **kwargs):
     -------
     lc : LineCollection instance.
     """
-
     # Find axes
     ax = plt.gca() if ax is None else ax
 
@@ -314,7 +339,6 @@ def plot_single_activity(
 
     see also "df.rolling()" and "pd.rolling_mean()"
     """
-
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
     series.plot(alpha=0.3, color="blue", style="-", ax=ax)
 
@@ -325,6 +349,12 @@ def plot_single_activity(
     h_median.plot(
             label="median", style='-', color="red", linewidth=2, ax=ax)
 
+    # lc = multiline(xs, ys, yint, cmap='bwr', lw=2)
+    #
+    # axcb = fig.colorbar(lc)
+    # axcb.set_label('Y-intercept')
+    # ax.set_title('Line Collection with mapped colors')
+
     # if args.legend:
     #     axes[0].legend(  # ncol=1, # borderaxespad=0.,
     #         borderaxespad=0.,
@@ -332,7 +362,6 @@ def plot_single_activity(
     #         fontsize=leg_fs,
     #         fancybox=True, framealpha=0.5)
     # # plt.legend(ncol=2, borderaxespad=0.)
-    # # fig.suptitle(figtitle, fontsize=title_fs)
     ax.legend()
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
@@ -405,21 +434,63 @@ def plot_median_days(
 
     # Get the colors for the lines
     # TODO: Check for unique days and have the same day consistent..
-    colors = plt.cm.viridis(np.linspace(0, 1, n_lines))
+    # TODO: Make colors really time-dependent
+    lc_idx = np.linspace(0, 1, n_lines)
+    colors = plt.cm.viridis(lc_idx)
 
     # Plot all curves
     for i in range(n_lines):
         # NOTE: Using "color" instead of "c" throws an error!
         med_list[i].plot(ax=ax, c=colors[i])
 
+    # lc = multiline(ax=ax)
+    # lc = multiline(xs, ys, c, cmap='bwr', lw=2)
+    # lc = multiline(xs, ys, yint, cmap='bwr', lw=2)
+    #
+    # axcb = fig.colorbar(lc)
+    # axcb.set_label('Y-intercept')
+    # ax.set_title('Line Collection with mapped colors')
+
+    # if args.legend:
+    #     axes[0].legend(  # ncol=1, # borderaxespad=0.,
+    #         borderaxespad=0.,
+    #         loc="upper right",  # bbox_to_anchor=(1.1, 1.0),
+    #         fontsize=leg_fs,
+    #         fancybox=True, framealpha=0.5)
+    # # plt.legend(ncol=2, borderaxespad=0.)
+    # ax.legend()
+
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}_medians.png"
     plot_path = ioh.safesavefig(ffn)
+    logging.debug(f"Figure exported to {plot_path}")
 
     # Cast all medians to the same day
+    datelist = []
+    for h_median in med_list:
+        datelist.extend(h_median.index)
 
+    # datelist = sorted(datelist)
+    mean_date = np.mean(datelist)
+    m_day = mean_date.day
+    m_month = mean_date.month
+    m_year = mean_date.year
 
+    fig, ax = plt.subplots(figsize=resolution, dpi=100)
 
+    # sd_list = []
+    for i in range(n_lines):
+        h_median = med_list[i]
+        sd_median = h_median.index.dt.replace(
+                year=m_year, month=m_month, day=m_day)
+
+        # sd_list.append(sd_median)
+
+        sd_median.plot(ax=ax, c=colors[i])
+
+    # ffn = ioh.safename(path_out / f"{name}.png", "file")
+    ffn = path_out / f"{name.lower()}_medians-sd.png"
+    plot_path = ioh.safesavefig(ffn)
     logging.debug(f"Figure exported to {plot_path}")
 
     return plot_path
