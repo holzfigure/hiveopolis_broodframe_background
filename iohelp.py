@@ -386,6 +386,10 @@ def setup_environment(
     #                "error in function safename()")
 
     # copy files to output-directory
+    src_out = dir_out / "src"
+    if not src_out.is_dir():
+        src_out.mkdir()
+        print(f"Created folder '{src_out}'")
     if not dependencies:
         dependencies = []
     dependencies.append(thisfile)
@@ -402,7 +406,7 @@ def setup_environment(
         # thatfile = os.path.join(
         #     dir_out, name + now_str() + ext)
         # thatfile = dir_out / f"{name}_{now_str()}{suffix}"
-        thatfile = dir_out / "{}_{}{}".format(name, now_str(), suffix)
+        thatfile = src_out / "{}_{}{}".format(name, now_str(), suffix)
         thatfile = safename(thatfile, 'file')
         # TODO: Replace this with a proper pathlib method once?
         #       And remove the 'str()' once Raspbian is n Python 3.6..
