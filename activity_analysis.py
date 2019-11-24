@@ -58,16 +58,18 @@ DEPENDENCIES = [
 #     "broodnest_obs/hive1"
 # )
 PATH_CSVS = Path(
-    "/media/holzfigure/Data/local_stuff/Hiveopolis/broodnests/"
-    "bee_activity_csvs/csv/"  # hive1/rpi1/"
+    # "/media/holzfigure/Data/local_stuff/Hiveopolis/broodnests/"
+    # "bee_activity_csvs/csv/"  # hive1/rpi1/"
+    "F:/Hiveopolis/comb_activity/bee_activity_191123-utc/csv"
 )
 # PATH_OUT = Path(
 #     "/media/holzfigure/Data/NAS/NAS_incoming_data/Hiveopolis/" +
 #     "broodnest_activity/csv"
 # )
 PATH_OUT = Path(
-    "/media/holzfigure/Data/local_stuff/Hiveopolis/broodnests/"
-    "bee_activity"
+    # "/media/holzfigure/Data/local_stuff/Hiveopolis/broodnests/"
+    # "bee_activity"
+    "F:/Hiveopolis/comb_activity"
 )
 # Filename e.g.: "act_hive1_rpi1_190804_000000-235959-utc_euclidean.csv"
 INFILE_PATTERN = "act_hive*_rpi*-utc*.csv"
