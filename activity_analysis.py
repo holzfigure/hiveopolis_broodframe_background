@@ -489,10 +489,11 @@ def plot_median_days(
         h_median = med_list[i]
         # sd_median = pd.to_datetime(h_median.index).dt.replace(
         #         year=m_year, month=m_month, day=m_day)
-        sd_median = vec_dt_replace(
-                pd.TimeSeries(h_median.index),
+        sd_times = vec_dt_replace(
+                pd.Series(h_median.index),
                 m_year, m_month, m_day)
 
+        sd_median = h_median.set_index(sd_times, drop=True)
         # sd_list.append(sd_median)
 
         sd_median.plot(ax=ax, c=colors[i])
