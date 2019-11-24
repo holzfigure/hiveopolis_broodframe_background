@@ -341,8 +341,11 @@ def plot_median_days(
         resolution=RESOLUTION,
         args=ARGS,
 ):
-    """Plot all median day curves with color depending on the date."""
+    """Plot all median day curves with color depending on the date.
 
+    https://stackoverflow.com/questions/38208700/
+    matplotlib-plot-lines-with-colors-through-colormap
+    """
     n_lines = len(med_list)
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
@@ -353,7 +356,7 @@ def plot_median_days(
 
     # Plot all curves
     for i in range(n_lines):
-        med_list[i].plot(ax=ax, color=colors[i])
+        med_list[i].plot(ax=ax, c=colors[i])
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}_medians.png"
