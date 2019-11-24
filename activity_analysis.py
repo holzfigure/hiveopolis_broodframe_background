@@ -473,7 +473,8 @@ def plot_median_days(
         datelist.extend(h_median.index)
 
     # datelist = sorted(datelist)
-    mean_date = np.mean(datelist)
+    # mean_date = np.mean(datelist)
+    mean_date = pd.to_timedelta(datelist).mean()
     m_day = mean_date.day
     m_month = mean_date.month
     m_year = mean_date.year
