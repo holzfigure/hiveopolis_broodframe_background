@@ -435,9 +435,9 @@ def setup_logging(
     https://docs.python.org/3/howto/logging-cookbook.html
     """
     err_msg = []
-    if not dir_log:
+    if dir_log is None:
         # dir_log = os.path.join(os.getcwd(), "DIR_LOG")
-        dir_log = Path.cwd() / "DIR_LOG"
+        dir_log = Path.cwd() / "log"
         dir_log = safename(dir_log, 'dir')
     if not dir_log.is_dir():
         try:
