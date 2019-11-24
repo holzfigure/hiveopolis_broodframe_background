@@ -197,7 +197,7 @@ def initialize_io(dir_in=PATH_CSVS, dir_out=PATH_OUT,
             daystamp=True,
             dependencies=deps,
     )
-    ioh.setup_logging(thisname, args, dir_log=dir_out)
+    ioh.setup_logging(thisname, args, dir_log=dir_out / "log")
     dir_out = Path(dir_out)
     logging.info(f"input from {dir_in}, output to {dir_out}")
 
