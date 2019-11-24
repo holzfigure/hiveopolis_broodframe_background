@@ -480,6 +480,7 @@ def plot_median_days(
     m_year = mean_date.year
     m_month = mean_date.month
     m_day = mean_date.day
+    logging.info(f"Parsed average date: {mean_date}")
 
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
 
@@ -488,7 +489,7 @@ def plot_median_days(
         h_median = med_list[i]
         # sd_median = pd.to_datetime(h_median.index).dt.replace(
         #         year=m_year, month=m_month, day=m_day)
-        sd_median = vec_dt_replace(h_median, m_year, m_month, m_day)
+        sd_median = vec_dt_replace(h_median.index, m_year, m_month, m_day)
 
         # sd_list.append(sd_median)
 
