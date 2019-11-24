@@ -486,7 +486,7 @@ def plot_median_days(
     # sd_list = []
     for i in range(n_lines):
         h_median = med_list[i]
-        sd_median = h_median.index.dt.replace(
+        sd_median = pd.to_datetime(h_median.index).dt.replace(
                 year=m_year, month=m_month, day=m_day)
 
         # sd_list.append(sd_median)
