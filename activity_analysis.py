@@ -111,7 +111,7 @@ RESOLUTION2 = (10.8, 8.8)
 # Funtional boxplots
 BOXPLOT_STEP = 25
 BOXPLOT_MAX = 500
-DEF_WF = 3
+DEF_WF = 2
 
 # LINESTYLES = ['-', '--', '-.', ':']
 # COLORMAP_NAME = "gist_ncar"  # "viridis"
@@ -561,13 +561,13 @@ def plot_median_days(
             fbp_medians.append(list(curve[:targ_len]))
     # Convert to numpy array
     fbp_medians = np.array(fbp_medians)
-    logging.debug(f"fbp_medians.shape: {fbp_medians.shape}")
+    logging.info(f"fbp_medians.shape: {fbp_medians.shape}")
 
     x_ax_labels = pd.date_range(
             "00:00", freq="H", periods=targ_len).strftime("%H:%M")
 
     func_boxplotting(fbp_medians, path_out, x_ax_labels,
-                     name="_medians-fbp")
+                     name=f"{name.lower()}_medians-sd")
 
     return plot_path
 
@@ -605,8 +605,7 @@ def func_boxplotting(a, dir_out, x_ax_labels,
     #     fig, ax = plt.subplots()
     # else:
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
-    title = (f"Daily Waxcomb Activity ({a.shape[0]} data, wf={wf}, "
-             f"name: {name}")
+    title = (f"Daily Waxcomb Activity ({a.shape[0]} curves, wf={wf})")
     # logging.info(f"Started functional boxplotting at {ioh.now_str()}")
 
     # # res = sm.graphics.fboxplot(FITS, wfactor=wf, ax=ax)
