@@ -38,6 +38,7 @@ import numpy as np
 # import cv2 as cv
 import matplotlib
 from matplotlib import pyplot as plt
+import matplotlib.dates as mdates
 from matplotlib.collections import LineCollection
 
 # Own libraries
@@ -489,6 +490,13 @@ def plot_median_days(
         h_median = med_list[i]
         # sd_median = pd.to_datetime(h_median.index).dt.replace(
         #         year=m_year, month=m_month, day=m_day)
+
+        # Get the day of the line
+        # Pick some point in the middle of the line (to avoid day-change)
+        idx = int(len(h_median.index) / 2)
+        dt = h_median.index[idx]
+        daylabel = dt.strftime("%y-%m-%d")
+
         dtseries = pd.Series(h_median.index)
         # sd_times = vec_dt_replace(
         #         dtseries,
@@ -500,7 +508,10 @@ def plot_median_days(
         h_median.index = sd_times
         # sd_list.append(sd_median)
 
-        h_median.plot(ax=ax, c=colors[i])
+        h_median.plot(ax=ax, c=colors[i], label=daylabel)
+
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    ax.legend()
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}_medians-sd.png"
