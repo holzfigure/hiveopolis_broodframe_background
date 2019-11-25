@@ -21,12 +21,13 @@ Euclidean distance or absolute difference are implemented.
 # Basic libraries
 import os
 # import glob
-import time
+# import time
 import logging
 import argparse
 import platform
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import timedelta  # datetime
+# from collections import Counter  # To count how often which length occurs..
 
 # Third-party libraries
 import pytz
@@ -40,6 +41,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.collections import LineCollection
+import statsmodels.api as sm  # For functional boxplots
 
 # Own libraries
 import iohelp as ioh
@@ -105,6 +107,11 @@ OUTLIER_THRESHOLD = 165000000  # e.g. 147237858
 # RESOLUTION = (16.0, 9.0)
 RESOLUTION = (12.8, 7.2)
 RESOLUTION2 = (10.8, 8.8)
+
+# Funtional boxplots
+BOXPLOT_STEP = 25
+BOXPLOT_MAX = 500
+DEF_WF = 3
 
 # LINESTYLES = ['-', '--', '-.', ':']
 # COLORMAP_NAME = "gist_ncar"  # "viridis"
@@ -488,6 +495,7 @@ def plot_median_days(
     sd_list = []
     # xs = []
     # ys = []
+    len_list = []
     for i in range(n_lines):
         h_median = med_list[i]
         # sd_median = pd.to_datetime(h_median.index).dt.replace(
@@ -509,6 +517,7 @@ def plot_median_days(
 
         h_median.index = sd_times
         sd_list.append(h_median)
+        len_list.append(len(h_median))
 
         # xs.append(list(h_median.index.astype(np.int64) // 10 ** 9))
         # ys.append(list(h_median))
@@ -537,7 +546,111 @@ def plot_median_days(
     # plot_path = ioh.safesavefig(ffn)
     # logging.debug(f"Figure exported to {plot_path}")
 
+    # Functional boxplots
+    # Build array of same-length day-curves
+    # c = Counter(len_list)
+    # c = np.bincount(len_list)
+    val_counts = pd.Series(len_list).value_counts()
+    logging.info(f"Different lengths: {val_counts}")
+
+    # Select the most common length
+    targ_len = val_counts.index[0]
+    fbp_medians = []
+    for curve in sd_list:
+        if len(curve) == targ_len:
+            fbp_medians.append(list(curve))
+    # Convert to numpy array
+    fbp_medians = np.array(fbp_medians)
+    logging.debug(f"fbp_medians.shape: {fbp_medians.shape}")
+
+    x_ax_labels = pd.date_range(
+            "00:00", freq="H", periods=targ_len).strftime("%H:%M")
+
+    func_boxplotting(fbp_medians, path_out, x_ax_labels,
+                     name="_medians-fbp")
+
     return plot_path
+
+
+def func_boxplotting(a, dir_out, x_ax_labels,
+                     name="",
+                     ext=DEF_EXT,
+                     wf=DEF_WF,
+                     resolution=RESOLUTION,
+                     args=ARGS,
+                     ):
+    """Make functional boxplots.
+
+    Usage:
+
+    # keygens = range(99, ngens, 100)
+    keygens = range(BOXPLOT_STEP-1, ngens, BOXPLOT_STEP)
+    if not BOXPLOT_STEP == 1:
+        keygens.insert(0, 0)
+    x_ax_labels = np.add(keygens, 1)
+
+    # boxgens = FITS[:, keygens]
+    func_boxplotting(FITS[:, keygens], dir_out, x_ax_labels, args,
+                     name="best", ext=DEF_EXT)
+    # boxgens = AVGS[:, keygens]
+    func_boxplotting(AVGS[:, keygens], dir_out, x_ax_labels, args,
+                     name="average", ext=DEF_EXT)
+    """
+    logging.info(f"Creating functional boxplots (wfactor={wf}), "
+                 f"shape of input array = {a.shape}")
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # if args.latexify:
+    #     fig, ax = plt.subplots()
+    # else:
+    fig, ax = plt.subplots(figsize=resolution, dpi=100)
+    title = (f"Daily Waxcomb Activity ({a.shape[0]} data, wf={wf}, "
+             f"name: {name}")
+    # logging.info(f"Started functional boxplotting at {ioh.now_str()}")
+
+    # # res = sm.graphics.fboxplot(FITS, wfactor=wf, ax=ax)
+    # if not args.latexify:
+    #     # sm.graphics.fboxplot(a, wfactor=wf, ax=ax)
+    #     sm.graphics.fboxplot(a, wfactor=wf, ax=ax,
+    #                          labels=range(1, a.shape[0]))
+    # else:  # except Exception as err:
+    #     # logging.warning("func_boxplotting error: {}".format(err))
+    #     sm.graphics.fboxplot(a, wfactor=wf, ax=ax)
+    # # logging.info('finished at {}'.format(
+    # #         now_str()))
+    # # logging.info('results: {}'.format(res))
+    # # plt.show()
+
+    sm.graphics.fboxplot(a, wfactor=wf, ax=ax,
+                         labels=range(0, a.shape[0]))
+
+    # if not args.latexify:
+    #     plt.title(title)
+    ax.set_xticks(np.arange(len(x_ax_labels)))
+    ax.set_xticklabels(x_ax_labels)
+    ax.relim()
+    # update ax.viewLim using the new dataLim
+    ax.autoscale_view()
+    # ax.set_xlim
+    ax.set_xlabel('hour')
+    ax.set_ylabel('activity')
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=70)
+    # fig.tight_layout()
+    # now_utc = datetime.utcnow().strftime('_%y%m%d-%H%M%S_utc')
+    plt.tight_layout()
+    ioh.format_axes(ax)
+    if not args.latexify:
+        plt.title(title)
+        plt.grid()
+        # plt.legend()
+    # outfilename = os.path.join(dir_out, "fboxplots" + name)
+    outfilename = dir_out / f"{name}"
+    ioh.safesavefig(outfilename, ext, close=False, verbose=True)
+    # , bbox=True)
+    # if args.arrest:
+    #     plt.show()
+    # plt.close()
 
 
 def fit_timeseries(xdates, ydata):
