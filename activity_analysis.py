@@ -525,7 +525,8 @@ def plot_median_days(
 
     # Try multiline
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
-    lc = multiline(xs, ys, colors, ax=ax, cmap="viridis", lw=1)
+    lc = multiline(np.array(xs), np.array(ys), np.array(colors),
+                   ax=ax, cmap="viridis", lw=1)
     axcb = fig.colorbar(lc)
     axcb.set_label("Date...")
     ax.set_title("Median Comb-Activity Mapped to the Same Day")
