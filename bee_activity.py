@@ -62,6 +62,9 @@ INFOLDER_PATTERN = "hive*_rpi*_day-*/"
 OUTCSV_PREFIX = "act"
 OUTRAW_PREFIX = "raw"
 
+#                    1676802
+FILESIZE_THRESHOLD = 500000
+
 PRINT_MODULUS = 1000
 
 # Maximal seconds accepted between images:
@@ -162,7 +165,7 @@ def initialize_io(dir_in=PATH_PHOTOS, dir_out=PATH_OUT,
             daystamp=True,
             dependencies=deps,
     )
-    ioh.setup_logging(thisname, args, dir_log=dir_out)
+    ioh.setup_logging(thisname, args, dir_log=dir_out / "log")
     dir_out = Path(dir_out)
     logging.info(f"input from {dir_in}, output to {dir_out}")
 
@@ -358,6 +361,7 @@ def main(
     file_pattern=INFILE_PATTERN,
     # folder_pattern=INFOLDER_PATTERN,
     tol_td=TOLERANCE_TIMEDELTA,
+    fsize_thresh=FILESIZE_THRESHOLD,
     print_modulus=PRINT_MODULUS,
     args=ARGS,
 ):
@@ -418,50 +422,61 @@ def main(
     try:
         for i in range(n_files - 1):
             next_file = filelist[i + 1]
-            next_hive, next_rpi, next_dt = parse_filename(
-                    next_file.name)
-            # next_img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
-            next_img = cv.imread(str(next_file))
-            logging.debug(f"Read image {next_file.name}")
 
-            # Check whether next file can be compared to the current file
-            # if (hive == next_hive) and (rpi == next_rpi) and ...
-            if (rpi == next_rpi) and ((next_dt - dt) < tol_td):
+            if next_file.stat().st_size > fsize_thresh:
+                next_hive, next_rpi, next_dt = parse_filename(
+                        next_file.name)
 
-                diff = compute_difference(img, next_img, path_diffs)
+                # next_img = cv.imread(file, cv2.IMREAD_GRAYSCALE)
+                next_img = cv.imread(str(next_file))
+                logging.debug(f"Read image {next_file.name}")
 
-                # Make row and append
-                # row_cols = ["time1", "time2", "activity", "file1", "file2"]
-                row = [dt, next_dt, diff, file.name, next_file.name]
-                rows.append(row)
+                # Check whether next file can be compared to the current file
+                # if (hive == next_hive) and (rpi == next_rpi) and ...
+                if (rpi == next_rpi) and ((next_dt - dt) < tol_td):
 
-                # if next_day > day:
-                if (next_dt.day != dt.day) or (next_dt.month != dt.month):
+                    diff = compute_difference(img, next_img, path_diffs)
 
+                    # Make row and append
+                    # row_cols = ["time1", "time2", "activity",
+                    #             "file1", "file2"]
+                    row = [dt, next_dt, diff, file.name, next_file.name]
+                    rows.append(row)
+
+                    # if next_day > day:
+                    if (next_dt.day != dt.day) or (next_dt.month != dt.month):
+
+                        # Export rows as CSV and empty row list
+                        if len(rows) > 0:
+                            logging.info("Day change, "
+                                         f"exporting {len(rows)} rows to CSV")
+                            export_csv(rows, row_cols, path_out,
+                                       hive, rpi, method)
+                            rows = []
+
+                else:
+                    logging.info(
+                        "Photos not comparable: "
+                        f"file1: {file.name}, file2: {next_file.name}, "
+                        "switching to next series"
+                    )
                     # Export rows as CSV and empty row list
                     if len(rows) > 0:
-                        logging.info("Day change, "
-                                     f"exporting {len(rows)} rows to CSV")
-                        export_csv(rows, row_cols, path_out, hive, rpi, method)
+                        logging.info(f"Exporting {len(rows)} rows to CSV")
+                        export_csv(rows, row_cols, path_out,
+                                   hive, rpi, method)
                         rows = []
 
+                if (i + 1) % print_modulus == 0:
+                    logging.info(f"{i + 1}/{n_files} "
+                                 f"({100 * (i + 1) / n_files:.3}%) in "
+                                 f"{(time.time() - t0) / 60.0:.3} minutes "
+                                 f"(last file: {next_file.name})")
             else:
-                logging.info(
-                    "Photos not comparable: "
-                    f"file1: {file.name}, file2: {next_file.name}, "
-                    "switching to next series"
-                )
-                # Export rows as CSV and empty row list
-                if len(rows) > 0:
-                    logging.info(f"Exporting {len(rows)} rows to CSV")
-                    export_csv(rows, row_cols, path_out, hive, rpi, method)
-                    rows = []
-
-            if (i + 1) % print_modulus == 0:
-                logging.info(f"{i + 1}/{n_files} "
-                             f"({100 * (i + 1) / n_files:.3}%) in "
-                             f"{(time.time() - t0) / 60.0:.3} minutes "
-                             f"(last file: {next_file.name})")
+                logging.warning(f"File {next_file.name} is too small: "
+                                f"{next_file.stat().st_size} < {fsize_thresh}"
+                                f"Skipping file.")
+                next_file = filelist[i]  # reset to previous file
 
             # Reset current photo data
             file, dt, img = next_file, next_dt, next_img
