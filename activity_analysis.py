@@ -551,14 +551,14 @@ def plot_median_days(
     # c = Counter(len_list)
     # c = np.bincount(len_list)
     val_counts = pd.Series(len_list).value_counts()
-    logging.info(f"Different lengths: {val_counts}")
+    logging.debug(f"Different lengths:\n{val_counts}")
 
     # Select the most common length
-    targ_len = val_counts.index[0]
+    targ_len = 24  # val_counts.index[0]
     fbp_medians = []
     for curve in sd_list:
-        if len(curve) == targ_len:
-            fbp_medians.append(list(curve))
+        if len(curve) >= targ_len:
+            fbp_medians.append(list(curve[:targ_len]))
     # Convert to numpy array
     fbp_medians = np.array(fbp_medians)
     logging.debug(f"fbp_medians.shape: {fbp_medians.shape}")
