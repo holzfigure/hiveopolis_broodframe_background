@@ -509,7 +509,7 @@ def plot_median_days(
 
         h_median.index = sd_times
         sd_list.append(h_median)
-        xs.append(h_median.index)
+        xs.append(list(h_median.index))
         ys.append(list(h_median))
 
         h_median.plot(ax=ax, c=colors[i], label=daylabel)
