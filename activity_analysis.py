@@ -486,8 +486,8 @@ def plot_median_days(
     fig, ax = plt.subplots(figsize=resolution, dpi=100)
 
     sd_list = []
-    xs = []
-    ys = []
+    # xs = []
+    # ys = []
     for i in range(n_lines):
         h_median = med_list[i]
         # sd_median = pd.to_datetime(h_median.index).dt.replace(
@@ -510,30 +510,32 @@ def plot_median_days(
         h_median.index = sd_times
         sd_list.append(h_median)
 
-        xs.append(list(h_median.index.astype(np.int64) // 10 ** 9))
-        ys.append(list(h_median))
+        # xs.append(list(h_median.index.astype(np.int64) // 10 ** 9))
+        # ys.append(list(h_median))
 
         h_median.plot(ax=ax, c=colors[i], label=daylabel)
 
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
     # ax.legend()  # pointless.. colorbar would be nicer.. try multiline?
 
+    ax.set_title("Median Comb-Activity Mapped to the Same Day")
+
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}_medians-sd"
     plot_path = ioh.safesavefig(ffn)
     logging.debug(f"Figure exported to {plot_path}")
 
-    # Try multiline
-    fig, ax = plt.subplots(figsize=resolution, dpi=100)
-    lc = multiline(np.array(xs), np.array(ys), np.array(colors),
-                   ax=ax, cmap="viridis", lw=1)
-    axcb = fig.colorbar(lc)
-    axcb.set_label("Date...")
-    ax.set_title("Median Comb-Activity Mapped to the Same Day")
-
-    ffn = path_out / f"{name.lower()}_medians-sd-multiline"
-    plot_path = ioh.safesavefig(ffn)
-    logging.debug(f"Figure exported to {plot_path}")
+    # # Try multiline
+    # fig, ax = plt.subplots(figsize=resolution, dpi=100)
+    # lc = multiline(xs, ys, colors,
+    #                ax=ax, cmap="viridis", lw=1)
+    # axcb = fig.colorbar(lc)
+    # axcb.set_label("Date...")
+    # ax.set_title("Median Comb-Activity Mapped to the Same Day")
+    #
+    # ffn = path_out / f"{name.lower()}_medians-sd-multiline"
+    # plot_path = ioh.safesavefig(ffn)
+    # logging.debug(f"Figure exported to {plot_path}")
 
     return plot_path
 
