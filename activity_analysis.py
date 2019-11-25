@@ -497,7 +497,7 @@ def plot_median_days(
         sd_times = dtseries.apply(lambda dt: dt.replace(
                 year=m_year, month=m_month, day=m_day))
 
-        sd_median = h_median.set_index(sd_times, drop=True)
+        sd_median = h_median.index = sd_times
         # sd_list.append(sd_median)
 
         sd_median.plot(ax=ax, c=colors[i])
