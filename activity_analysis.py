@@ -640,10 +640,11 @@ def func_boxplotting(a, dir_out, x_ax_labels,
     # now_utc = datetime.utcnow().strftime('_%y%m%d-%H%M%S_utc')
     plt.tight_layout()
     ioh.format_axes(ax)
-    if not args.latexify:
-        plt.title(title)
-        plt.grid()
-        # plt.legend()
+    # if not args.latexify:
+    plt.title(title)
+    plt.grid()
+    # plt.legend()
+
     # outfilename = os.path.join(dir_out, "fboxplots" + name)
     outfilename = dir_out / f"{name}"
     ioh.safesavefig(outfilename, ext, close=False, verbose=True)
