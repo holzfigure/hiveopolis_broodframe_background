@@ -497,10 +497,10 @@ def plot_median_days(
         sd_times = dtseries.apply(lambda dt: dt.replace(
                 year=m_year, month=m_month, day=m_day))
 
-        sd_median = h_median.index = sd_times
+        h_median.index = sd_times
         # sd_list.append(sd_median)
 
-        sd_median.plot(ax=ax, c=colors[i])
+        h_median.plot(ax=ax, c=colors[i])
 
     # ffn = ioh.safename(path_out / f"{name}.png", "file")
     ffn = path_out / f"{name.lower()}_medians-sd.png"
