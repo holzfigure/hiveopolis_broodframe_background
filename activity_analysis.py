@@ -98,8 +98,10 @@ TIME_INFILE_TAG = "-utc"
 TIME_INFILE_FMT = "%y%m%d_%H%M%S-%H%M%S-utc"  # 2nd part is time-span
 
 # Plotting Parameters
+# Max difference with Manhattan-Distance:
+# 1920 * 1080 * 255 = 528.768.000
 # e.g.              147237858
-OUTLIER_THRESHOLD = 165000000  # e.g. 147237858
+OUTLIER_THRESHOLD = 173000000  # e.g. 147237858
 # Plot properties
 # RESOLUTION = (19.20, 10.80)
 # RESOLUTION = (7.2, 4.8)
