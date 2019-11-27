@@ -788,7 +788,7 @@ def main(
                 h_median = plot_single_activity(
                         df["activity"], name, path_out)[1]
             else:
-                logging.warning(f"All data in {csv_path.name} are outliers,
+                logging.warning(f"All data in {csv_path.name} are outliers, "
                                 "skipping..")
                 continue
 
