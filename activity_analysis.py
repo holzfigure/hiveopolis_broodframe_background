@@ -781,11 +781,16 @@ def main(
             # Crop df to plausible measurements
             df = df[df.activity < outlier]
 
-            name += "_removed-ols"
+            if len(df) > 0:
+                name += "_removed-ols"
 
-            # Plot_single_activity day
-            h_median = plot_single_activity(
-                    df["activity"], name, path_out)[1]
+                # Plot_single_activity day
+                h_median = plot_single_activity(
+                        df["activity"], name, path_out)[1]
+            else:
+                logging.warning(f"All data in {csv_path.name} are outliers,
+                                "skipping..")
+                continue
 
         df_list.append(df)
         med_list.append(h_median)
