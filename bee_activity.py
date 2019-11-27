@@ -64,6 +64,7 @@ OUTRAW_PREFIX = "raw"
 
 #                    1676802
 FILESIZE_THRESHOLD = 500000
+DIFF_THRESHOLD = 14  # Filter out noise from the difference image
 
 PRINT_MODULUS = 1000
 
