@@ -84,7 +84,7 @@ TIME_INFOLDER_FMT = "%y%m%d"
 TIME_INFILE_TAG = "-utc"
 TIME_INFILE_FMT = "%y%m%d-%H%M%S-utc.jpg"
 
-# argument parsing
+# Argument parsing
 parser = argparse.ArgumentParser(
     description=("Extract the broodnest from colony photos."))
 parser.add_argument("-d", "--debug", action="store_true",
